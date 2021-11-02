@@ -1,0 +1,18 @@
+#BlueJ class context
+comment0.target=PacketHandler
+comment0.text=\r\n\ Escreva\ a\ descri\u00E7\u00E3o\ da\ classe\ PacketHandler\ aqui.\r\n\ \r\n\ @author\ (seu\ nome)\ \r\n\ @version\ (n\u00FAmero\ de\ vers\u00E3o\ ou\ data)\r\n
+comment1.params=socket\ packet
+comment1.target=PacketHandler(java.net.DatagramSocket,\ java.net.DatagramPacket)
+comment2.params=
+comment2.target=void\ run()
+comment3.params=
+comment3.target=void\ handlePacket()
+comment4.params=packet
+comment4.target=int\ verifyPacket(byte[])
+comment5.params=bytes
+comment5.target=int\ retriveNumber(byte[])
+comment6.params=
+comment6.target=void\ sendFile()
+comment7.params=file
+comment7.target=void\ receiveFile(int)
+numComments=8

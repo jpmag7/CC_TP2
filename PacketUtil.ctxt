@@ -1,0 +1,12 @@
+#BlueJ class context
+comment0.target=PacketUtil
+comment0.text=\r\n\ Escreva\ a\ descri\u00E7\u00E3o\ da\ classe\ PacketUtil\ aqui.\r\n\ \r\n\ @author\ (seu\ nome)\ \r\n\ @version\ (n\u00FAmero\ de\ vers\u00E3o\ ou\ data)\r\n
+comment1.params=socket\ address\ port\ data\ ID
+comment1.target=void\ send(java.net.DatagramSocket,\ java.net.InetAddress,\ int,\ byte[],\ int)
+comment2.params=bytes\ hash
+comment2.target=byte[]\ crypt(byte[],\ int)
+comment3.params=i
+comment3.target=byte[]\ intToBytes(int)
+comment4.params=intBytes
+comment4.target=int\ byteArrayToInt(byte[])
+numComments=5
