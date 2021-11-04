@@ -1,6 +1,7 @@
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 /**
  * Escreva a descrição da classe Requester aqui.
@@ -15,6 +16,9 @@ public class Requester extends Thread
     private byte[] bytes;
     private int port;
     private int fileNum;
+    private byte[] receiveBufferSize;
+    private Map<Integer, Long> timers;
+    private Map<Integer, Integer> missingList;
     
     
     public Requester(DatagramSocket socket, InetAddress address, int port, int fileNum){
@@ -22,20 +26,23 @@ public class Requester extends Thread
         this.address = address;
         this.port = port;
         this.fileNum = fileNum;
+        timers = SystemInfo.fileTimers.get(address);
+        missingList = SystemInfo.fileLowestMissing.get(address);
         byte[] file = PacketUtil.intToBytes(fileNum);
-        bytes = new byte[file.length + file.length];
+        receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
+        bytes = new byte[file.length + file.length + receiveBufferSize.length];
         System.arraycopy(file, 0, bytes, 0, file.length);
     }
     
     
     public void run(){
-        int lowestMissing = -2;
+        int lowestMissing = 0;
         // Set file timer to now
-        SystemInfo.fileTimers.put(fileNum, System.currentTimeMillis());
+        timers.put(fileNum, 0L);
         
-        while((lowestMissing = SystemInfo.fileLowestMissing.get(fileNum)) > -2){
+        while((lowestMissing = missingList.get(fileNum)) != 0){
             // Make request
-            System.out.println("Requesting: " + lowestMissing);
+            System.err.println("Requesting sequence number: " + lowestMissing);
             request(lowestMissing);
             
             await();
@@ -46,6 +53,7 @@ public class Requester extends Thread
     private void request(int lowestMissing){
         byte[] seq = PacketUtil.intToBytes(lowestMissing);
         System.arraycopy(seq, 0, bytes, 4, seq.length);
+        System.arraycopy(receiveBufferSize, 0, bytes, 8, receiveBufferSize.length);
         
         try{
             PacketUtil.send(socket, address, port, bytes, SystemInfo.REQUEST);
@@ -55,20 +63,25 @@ public class Requester extends Thread
     }
     
     
-    private void await(){
-        // Wait here for n milliseconds
-        long dif;
-        SystemInfo.fileRequestLock.get(fileNum).lock();
-        while((dif = System.currentTimeMillis() - SystemInfo.fileTimers.get(fileNum)) <= SystemInfo.ResponseWaitTime){
-            SystemInfo.fileRequestLock.get(fileNum).unlock();
+    private void await(){ // Wait here for n milliseconds
+        SystemInfo.fileRequestLock.get(address).get(fileNum).lock();
+        
+        while(timers.get(fileNum) <
+            (missingList.get(fileNum) < 0 ? SystemInfo.BatchWaitTime : SystemInfo.PacketWaitTime)){
+            timers.put(fileNum, timers.get(fileNum) + 1);
+            System.out.println("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
+            SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
+            
             try{
-                TimeUnit.MILLISECONDS.sleep(SystemInfo.ResponseWaitTime - dif);
+                TimeUnit.MILLISECONDS.sleep(1);
             }catch (Exception e){
-                System.err.println("Error on requester sleep: " + e);
+                System.err.println("Error on requester wait: " + e);
             }
-            SystemInfo.fileRequestLock.get(fileNum).lock();
+            
+            SystemInfo.fileRequestLock.get(address).get(fileNum).lock();
         }
-        SystemInfo.fileTimers.put(fileNum, System.currentTimeMillis());
-        SystemInfo.fileRequestLock.get(fileNum).unlock();
+        // Reset timer
+        timers.put(fileNum, 0L);
+        SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
     }
 }

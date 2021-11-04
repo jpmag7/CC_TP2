@@ -15,6 +15,11 @@ public class FTRapid extends Thread
     
     public FTRapid(DatagramSocket socket){
         this.socket = socket;
+        try{
+            socket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
+        }catch(Exception e){
+            System.err.println("Error setting receive buffer size: " + e);
+        }
     }
     
     public void run(){
@@ -31,8 +36,7 @@ public class FTRapid extends Thread
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
             
-            PacketHandler ph = new PacketHandler(socket, packet);
-            ph.start();
+            new PacketHandler(socket, packet).start();
         }
     }
 }

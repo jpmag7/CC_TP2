@@ -3,6 +3,10 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.*;
+import java.net.InetAddress;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Escreva a descrição da classe Settings aqui.
@@ -12,21 +16,37 @@ import java.util.concurrent.locks.*;
  */
 public class SystemInfo
 {
-    public final static int PassHash = 123;
-    
+    // Socket setup variables
     public final static int HttpPort = 80;
     public final static int FTRapidPort = 80;
-    public final static int PacketSize = 256;
-    public final static int ResponseWaitTime = 200; // milliseconds
-    public final static int SendWaitTime = 1; // nanoseconds
+    public final static int PacketSize = 1024;//256;
+    public final static int ReceiveBufferSize = 65536;
+    
+    // Sync control variables
+    public static String[] m_list;
+    public static int ActiveClients = 0;
+    public static Map<InetAddress, String[]> their_lists = new HashMap<>();
+    
+    // Traffic control variables
+    public static int Redundancy = 1;
+    public static int BatchSizeReceive;
+    public static long RepetedPackets = 0;
     
     // ID's
     public final static int REQUEST = -1;
     public final static int ERROR = -50;
     
+    // Security
+    public final static int PassHash = 123;
+    
     // Request control variables
-    public static Map<Integer, Lock> fileRequestLock = new HashMap();
-    public static Map<Integer, Integer> fileLowestMissing = new HashMap<>();
-    public static Map<Integer, Long> fileTimers = new HashMap<>();
-    public static Map<Integer, List<Integer>> fileSeq = new HashMap<>();
+    public final static int BatchWaitTime = 200; // milliseconds
+    public final static int PacketWaitTime = 10; // milliseconds
+    public static Map<InetAddress, Map<Integer, Long>> fileTimers = new HashMap<>();
+    public static Map<InetAddress, Map<Integer, Lock>> fileRequestLock = new HashMap();
+    public static Map<InetAddress, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
+    public static Map<InetAddress, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
+    
+    public static Map<InetAddress, Lock> batchRequestedLock = new HashMap<>();
+    public static Set<Integer> batchesRequested = ConcurrentHashMap.newKeySet();
 }

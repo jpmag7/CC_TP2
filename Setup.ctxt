@@ -1,0 +1,20 @@
+#BlueJ class context
+comment0.target=Setup
+comment0.text=\r\n\ Escreva\ a\ descri\u00E7\u00E3o\ da\ classe\ Setup\ aqui.\r\n\ \r\n\ @author\ (seu\ nome)\ \r\n\ @version\ (n\u00FAmero\ de\ vers\u00E3o\ ou\ data)\r\n
+comment1.params=folder
+comment1.target=boolean\ folderVerifica(java.lang.String)
+comment2.params=enderecos
+comment2.target=boolean\ enderecoVerifica(java.lang.String[])
+comment3.params=folder\ enderecos
+comment3.target=boolean\ verificaParametros(java.lang.String,\ java.lang.String[])
+comment4.params=pasta
+comment4.target=void\ preencheLista(java.lang.String)
+comment5.params=args
+comment5.target=java.lang.String[]\ setup(java.lang.String[])
+comment6.params=addresses
+comment6.target=void\ setupSystemInfo(java.lang.String[])
+comment7.params=address\ file
+comment7.target=void\ setupForNewFile(java.net.InetAddress,\ int)
+comment8.params=socket\ addresses
+comment8.target=void\ requestAllLists(java.net.DatagramSocket,\ java.lang.String[])
+numComments=9

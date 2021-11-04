@@ -5,6 +5,11 @@ import java.util.Random;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 
 /**
  * Escreva a descrição da classe PacketUtil aqui.
@@ -14,6 +19,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class PacketUtil
 {
+    private static Random r = new Random();
+    private final static boolean simulNet = true;
+    
     public static void send(DatagramSocket socket, InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
         byte[] dataAndID = new byte[data.length + id.length];
@@ -29,13 +37,40 @@ public class PacketUtil
         System.arraycopy(dataAndID, 0, encryptedData, hash.length, dataAndID.length);
         
         DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address, port);
-        socket.send(packet);
         
-        try{
-            TimeUnit.NANOSECONDS.sleep(1);
-        }catch (Exception e){
-            System.err.println("Error on packet util sleep: " + e);
+        if(simulNet) 
+            for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++) 
+                simulNet(socket, packet);
+        else for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++)
+                socket.send(packet);
+    }
+    
+    
+    private static void simulNet(DatagramSocket socket, DatagramPacket packet) throws Exception{
+        float packetLossProb = 2;
+        int maxPacketDelay = 1;
+        
+        if(r.nextDouble() * 100f < 100f - packetLossProb){
+            try{
+                TimeUnit.MILLISECONDS.sleep(r.nextInt(maxPacketDelay + 1));
+            }catch (Exception e){
+                System.err.println("Error on SimulNet wait: " + e);
+            }
+            socket.send(packet);
         }
+    }
+    
+    
+    public static byte[] makePacket(int seqNum, int totalNum, byte[] data){
+        byte[] seq = PacketUtil.intToBytes(seqNum);
+        byte[] total = PacketUtil.intToBytes(totalNum);
+        
+        byte[] bytes = new byte[data.length + seq.length + total.length];
+        
+        System.arraycopy(seq, 0, bytes, 0, seq.length);
+        System.arraycopy(total, 0, bytes, seq.length, total.length);
+        System.arraycopy(data, 0, bytes, total.length + seq.length, data.length);
+        return bytes;
     }
     
     
@@ -54,14 +89,12 @@ public class PacketUtil
     }
     
     
-    
     public static byte[] intToBytes( final int i ) {
         ByteBuffer bb = ByteBuffer.allocate(4); 
         bb.putInt(i); 
         return bb.array();
     }
-    
-    
+
     
     public static int byteArrayToInt(byte[] intBytes){
         ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes);

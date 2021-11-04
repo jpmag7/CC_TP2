@@ -4,6 +4,9 @@ import java.net.DatagramPacket;
 import java.util.Arrays;
 import java.util.concurrent.locks.*;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Escreva a descrição da classe FFSync aqui.
@@ -13,9 +16,18 @@ import java.util.ArrayList;
  */
 public class FFSync
 {
-    public static void main() throws Exception{
+    public static void main(String[] args) throws Exception{
         // Confirm program arguments
-        
+        String[] addresses;
+        try{
+            if((addresses = Setup.setup(args)) == null) {
+                System.err.println("Invalid arguments (folder inexistent or ip's are down)");
+                return;
+            }
+        }catch (Exception e){
+            System.err.println("Error on setup: " + e);
+            return;
+        }
         
         // Http server
         //HttpServer httpServer = new HttpServer();
@@ -29,28 +41,20 @@ public class FFSync
         InetAddress clientAddress = InetAddress.getByName("localhost");
         int clientPort = SystemInfo.FTRapidPort;
         
+        Setup.setupSystemInfo(addresses);
+        
         FTRapid server = new FTRapid(socketServer);
         server.start();
         
         FTRapid client = new FTRapid(socketClient);
         client.start();
         
-        SystemInfo.fileRequestLock.put(0, new ReentrantLock());
-        SystemInfo.fileLowestMissing.put(0, 0);
-        SystemInfo.fileSeq.put(0, new ArrayList<Integer>());
+        Setup.requestAllLists(socketServer, addresses);
         
-        Requester requester = new Requester(socketServer, clientAddress, clientPort, 0);
-        
-        long startTime = System.currentTimeMillis();
-        
-        requester.start();
-        requester.join();
-        
-        long endTime = System.currentTimeMillis();
-        
-        System.out.println("Ended");
-        System.out.println("Packets received: " + SystemInfo.fileSeq.get(0).size());
-        System.out.println("Transfer took: " + (endTime - startTime) + " milliseconds");
+        System.err.println("Ended");
+        System.err.println("Unique packets received: " + SystemInfo.fileSeq.get(clientAddress).get(0).size());
+        System.err.println("Total received: " + (SystemInfo.fileSeq.get(clientAddress).get(0).size() + SystemInfo.RepetedPackets));
+        System.err.println("Repeted packets: " + SystemInfo.RepetedPackets);
         
         
         server.join();
