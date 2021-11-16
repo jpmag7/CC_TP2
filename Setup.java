@@ -79,7 +79,7 @@ public class Setup
             SystemInfo.fileLowestMissing.put(address, new HashMap<>());
             SystemInfo.fileSeq.put(address, new HashMap<>());
             SystemInfo.fileTimers.put(address, new HashMap<>());
-            SystemInfo.batchRequestedLock.put(address, new ReentrantLock());
+            SystemInfo.their_lists.put(address, new HashMap<>());
             
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }
@@ -95,7 +95,8 @@ public class Setup
     
     public static void requestAllLists(DatagramSocket socket, InetAddress[] addresses) throws Exception{
         for(InetAddress address : addresses){
-            Requester r = new Requester(socket, address, SystemInfo.FTRapidPort, 0);
+            FileManager.filesAsked.incrementAndGet();
+            Requester r = new Requester(socket, address, SystemInfo.FTRapidPort, 0, SystemInfo.REQUEST);
             r.start();
         }
     }

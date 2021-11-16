@@ -7,6 +7,8 @@ import java.net.InetAddress;
 import java.util.concurrent.locks.*;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Escreva a descrição da classe FileManager aqui.
@@ -17,6 +19,9 @@ import java.util.Arrays;
 public class FileManager
 {
     public static int payloadSize = SystemInfo.PacketSize - 24;
+    public static AtomicInteger filesAsked = new AtomicInteger();
+    public static AtomicInteger filesReceived = new AtomicInteger();
+    
     // Send
     public static Map<Integer, Integer> filesSendSize = new HashMap<>();
     public static Map<Integer, FileInputStream> filesSend = new ConcurrentHashMap<>();
@@ -42,5 +47,15 @@ public class FileManager
     public static void close(InetAddress address, int file) throws Exception{
         System.out.println("Closing file: " + file);
         filesReceive.get(address).get(file).close();
+        System.out.println("Files received: " + filesReceived.incrementAndGet());
+        
+        if(FileManager.filesReceived.get() == FileManager.filesAsked.get()){
+            Setup.setupForNewFile(address, SystemInfo.SHUTDOWN);
+            FileManager.filesAsked.incrementAndGet();
+            System.out.println("Sending shutdown signal .-.-.-.-.-.-.-.-.-.-.-.-");
+            new Requester(Listener.socket, address, SystemInfo.FTRapidPort, SystemInfo.SHUTDOWN, SystemInfo.SHUTDOWN).start();
+        }
+        
+        Listener.checkIfAllDone();
     }
 }

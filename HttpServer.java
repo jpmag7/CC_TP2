@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.OutputStreamWriter;
 import java.io.InputStreamReader;
 import java.io.BufferedWriter;
+import java.net.SocketException;
 
 /**
  * Escreva a descrição da classe HttpServer aqui.
@@ -13,10 +14,16 @@ import java.io.BufferedWriter;
  */
 public class HttpServer extends Thread
 {
+    public static ServerSocket serverSocket;
+    private int port;
+    
+    public HttpServer(int port){
+        this.port = port;
+    }
+    
     public void run(){
         try{
-            int port = SystemInfo.HttpPort;
-            ServerSocket serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(port);
             System.err.println("Socket created in port: " + port);
         
             while (true) {
@@ -26,7 +33,10 @@ public class HttpServer extends Thread
                 HttpThread thread = new HttpThread(clientSocket);
                 thread.start();
             }
-        }catch (Exception e){}
+        }catch (SocketException e){}
+        catch(Exception e){
+            e.printStackTrace();
+        }
     }
     
     

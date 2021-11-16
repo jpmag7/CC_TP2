@@ -21,16 +21,18 @@ public class Requester extends Thread
     private byte[] bytes;
     private int port;
     private int fileNum;
+    private int id;
     private byte[] receiveBufferSize;
     private Map<Integer, Long> timers;
     private Map<Integer, Integer> missingList;
     
     
-    public Requester(DatagramSocket socket, InetAddress address, int port, int fileNum){
+    public Requester(DatagramSocket socket, InetAddress address, int port, int fileNum, int id){
         this.socket = socket;
         this.address = address;
         this.port = port;
         this.fileNum = fileNum;
+        this.id = id;
         timers = SystemInfo.fileTimers.get(address);
         missingList = SystemInfo.fileLowestMissing.get(address);
         byte[] file = PacketUtil.intToBytes(fileNum);
@@ -67,7 +69,7 @@ public class Requester extends Thread
         System.arraycopy(receiveBufferSize, 0, bytes, 8, receiveBufferSize.length);
         
         try{
-            PacketUtil.send(socket, address, port, bytes, SystemInfo.REQUEST);
+            PacketUtil.send(socket, address, port, bytes, id);
         } catch(Exception e){
             System.err.println("Couldn't send request packet: " + e);
         }

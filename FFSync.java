@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Scanner;
 
 /**
  * Escreva a descrição da classe FFSync aqui.
@@ -17,8 +18,8 @@ import java.util.HashSet;
 public class FFSync
 {
     public static void main(String[] args) throws Exception{ 
-        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test", "localhost"
-        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test","80", "localhost" 
+        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "localhost"
+        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "80" "localhost" 
         // Confirm program arguments
         InetAddress[] addresses;
         try{
@@ -31,36 +32,29 @@ public class FFSync
             return;
         }
         
+        // Password
+        System.out.println("Password:");
+        SystemInfo.PassHash = new Scanner(System.in).nextLine().hashCode();
+        
         // Http server
-        //HttpServer httpServer = new HttpServer();
-        //httpServer.start();
+        HttpServer httpServer = new HttpServer(SystemInfo.FTRapidPort == 8080 ? 80 : 8080);
+        httpServer.start();
 
         // FT-Rapid
         System.out.println("Start");
         
-        //DatagramSocket socketServer = new DatagramSocket(SystemInfo.FTRapidPort);
         DatagramSocket socketClient = new DatagramSocket(SystemInfo.FTRapidPort == 8080 ? 80 : 8080);
         
         Setup.setupSystemInfo(addresses);
         
-        //Listener server = new Listener(socketServer);
-        //server.start();
+        Setup.requestAllLists(socketClient, addresses);
         
         Listener client = new Listener(socketClient);
         client.start();
         
-        Setup.requestAllLists(socketClient, addresses);
-        
-        //System.err.println("Ended");
-        //System.err.println("Unique packets received: " + SystemInfo.fileSeq.get(addresses[0]).get(0).size());
-        //System.err.println("Total received: " + (SystemInfo.fileSeq.get(addresses[0]).get(0).size() + SystemInfo.RepetedPackets));
-        //System.err.println("Repeted packets: " + SystemInfo.RepetedPackets);
-        
-        
-        //server.join();
         client.join();
+        HttpServer.serverSocket.close();
         
-        //socketServer.close();
-        socketClient.close();
+        System.out.println("Folders are syncronized. Exiting");
     }
 }

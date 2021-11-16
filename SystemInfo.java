@@ -17,16 +17,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SystemInfo
 {
     // Socket setup variables
-    public final static int HttpPort = 80;
     public static int FTRapidPort = 80;
     public final static int PacketSize = 512;
     public final static int ReceiveBufferSize = 65536 * 4;
+    public final static int socketTimeout = 10000;
     
     // Sync control variables
     public static String folder;
     public static String[] m_list;
-    public static Lock their_lists_lock = new ReentrantLock();
     public static Map<InetAddress, Map<Integer, String>> their_lists = new HashMap<>();
+    public static Set<InetAddress> doneClients = ConcurrentHashMap.newKeySet(); 
     
     // Traffic control variables
     public static int Redundancy = 1;
@@ -35,10 +35,12 @@ public class SystemInfo
     
     // ID's
     public final static int REQUEST = -1;
+    public final static int SHUTDOWN = -2;
+    public final static int SHUTDOWNACK = -3;
     public final static int ERROR = -50;
     
     // Security
-    public final static int PassHash = 123;
+    public static int PassHash = 123;
     
     // Request control variables
     public final static int BatchWaitTime = 200; // milliseconds
@@ -47,7 +49,4 @@ public class SystemInfo
     public static Map<InetAddress, Map<Integer, Lock>> fileRequestLock = new HashMap();
     public static Map<InetAddress, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
     public static Map<InetAddress, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
-    
-    public static Map<InetAddress, Lock> batchRequestedLock = new HashMap<>();
-    public static Set<Integer> batchesRequested = ConcurrentHashMap.newKeySet();
 }
