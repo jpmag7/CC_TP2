@@ -20,7 +20,7 @@ import java.io.ByteArrayInputStream;
 public class PacketUtil
 {
     private static Random r = new Random();
-    private final static boolean simulNet = true;
+    private final static boolean simulNet = false;
     
     public static void send(DatagramSocket socket, InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
@@ -47,8 +47,8 @@ public class PacketUtil
     
     
     private static void simulNet(DatagramSocket socket, DatagramPacket packet) throws Exception{
-        float packetLossProb = 2;
-        int maxPacketDelay = 1;
+        float packetLossProb = 0;
+        int maxPacketDelay = 0;
         
         if(r.nextDouble() * 100f < 100f - packetLossProb){
             try{
@@ -89,6 +89,20 @@ public class PacketUtil
     }
     
     
+    public static byte[] crypt(byte[] bytes, int hash, int start, int end){
+        Random random = new Random(SystemInfo.PassHash + hash);
+        
+        byte[] values = new byte[end - start];
+        random.nextBytes(values);
+        
+        int v = 0;
+        for (int i = start; i < end; i++)
+            bytes[i] = (byte) (bytes[i] ^ values[v++]);
+        
+        return bytes;
+    }
+    
+    
     public static byte[] intToBytes( final int i ) {
         ByteBuffer bb = ByteBuffer.allocate(4); 
         bb.putInt(i); 
@@ -98,6 +112,12 @@ public class PacketUtil
     
     public static int byteArrayToInt(byte[] intBytes){
         ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes);
+        return byteBuffer.getInt();
+    }
+    
+    
+    public static int byteArrayToInt(byte[] intBytes, int start, int end){
+        ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes, start, end - start);
         return byteBuffer.getInt();
     }
 }

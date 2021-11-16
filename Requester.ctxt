@@ -9,4 +9,6 @@ comment3.params=lowestMissing
 comment3.target=void\ request(int)
 comment4.params=
 comment4.target=void\ await()
-numComments=5
+comment5.params=
+comment5.target=void\ addFileToFileManager()
+numComments=6

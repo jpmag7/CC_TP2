@@ -10,6 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.*;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.stream.Stream;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -23,9 +28,11 @@ public class PacketHandler extends Thread
     private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] data;
-    private int dataLength;
     private InetAddress address;
     private int port;
+    
+    private int startIndex = 0;
+    private int endIndex = 0;
     
     public PacketHandler(DatagramSocket socket, DatagramPacket packet){
         this.socket = socket;
@@ -34,14 +41,14 @@ public class PacketHandler extends Thread
     
     public void run(){
         this.data = packet.getData();
-        this.dataLength = packet.getLength();
+        endIndex = packet.getLength();
         this.address = packet.getAddress();
         this.port = packet.getPort();
         
         try{
             handlePacket();
         }catch(Exception e) {
-            System.err.println(e);
+            e.printStackTrace();
         }
     }
     
@@ -50,40 +57,58 @@ public class PacketHandler extends Thread
         
         switch(id){
             case SystemInfo.REQUEST:
-                sendFile();
+                receiveRequest();
                 break;
             default:
                 if (id > SystemInfo.REQUEST) // Received a response
-                    receiveFile(id);
+                    receiveResponse(id);
                 else System.err.println("Corrupted packet");
         }
     }
     
     
     private int verifyPacket(byte[] packet){
-        int hash = PacketUtil.byteArrayToInt(Arrays.copyOfRange(packet, 0, 4));
-        byte[] dataAndID = Arrays.copyOfRange(packet, 4, dataLength);
-        dataAndID = PacketUtil.crypt(dataAndID, hash);
+        //int hash = PacketUtil.byteArrayToInt(Arrays.copyOfRange(packet, 0, 4));
+        int hash = retriveInt(packet);
+        byte[] dataAndID = Arrays.copyOfRange(packet, 4, endIndex);
+        data = PacketUtil.crypt(dataAndID, hash);
+        data = PacketUtil.crypt(packet, hash, startIndex, endIndex);
         
         if(hash != Arrays.hashCode(dataAndID)) return SystemInfo.ERROR;
-        
-        int id = retriveInt(dataAndID); // Retrive id from data
+        //if(hash != Arrays.hashCode(Arrays.copyOfRange(packet, startIndex, endIndex))) return SystemInfo.ERROR;
+        //System.out.println("Got here");
+        //int id = retriveInt(dataAndID); // Retrive id from data
+        int id = retriveInt(data);
         return id;
     }
     
     
     private int retriveInt(byte[] bytes){
-        int num = PacketUtil.byteArrayToInt(Arrays.copyOfRange(bytes, 0, 4));
-        this.data = Arrays.copyOfRange(bytes, 4, bytes.length);
-        dataLength -= 4;
+        //int num = PacketUtil.byteArrayToInt(Arrays.copyOfRange(bytes, 0, 4));
+        int num = PacketUtil.byteArrayToInt(data, startIndex, startIndex + 4);
+        //this.data = Arrays.copyOfRange(bytes, 4, bytes.length);
+        startIndex = startIndex + 4;
         return num;
     }
     
     
-    private void sendFile() throws Exception{
+    private void receiveRequest() throws Exception{
         int file = retriveInt(data);
         int sequence = retriveInt(data);
+        int batchSizeSend = retriveInt(data);
         
+        if(sequence < 0){ //Send one batch
+            if(file == 0) sendListBatch(sequence, batchSizeSend);
+            else sendFileBatch(file, sequence, batchSizeSend);
+        }
+        else{ // Send one packet
+            if(file == 0) sendListPacket(sequence);
+            else sendFilePacket(file, sequence);
+        }
+    }
+    
+    // Send List batch
+    private void sendListBatch(int sequence, int batchSizeSend) throws Exception{
         Lock l = SystemInfo.batchRequestedLock.get(address);
         l.lock();
         if(sequence < 0 && SystemInfo.batchesRequested.contains(sequence)){
@@ -94,32 +119,64 @@ public class PacketHandler extends Thread
             SystemInfo.batchesRequested.add(sequence);
         l.unlock();
         
-        int batchSizeSend = retriveInt(data);
-        String[] list = {"queijo.txt", "fiambre.txt", "ovos.micose"};
-        int total = 100000; // put file/list size here
+        int total = SystemInfo.m_list.length;
+        int start = (sequence * -1 - 1) * batchSizeSend;
+        int end = Math.min(start + batchSizeSend, total);
         
-        if(sequence < 0){
-            int start = (sequence * -1 - 1) * batchSizeSend;
-            int end = Math.min(start + batchSizeSend, total);
-            System.err.println("Request for batch: " + sequence * -1);
-            for(int i = start; i < end; i++){
-                byte[] byteList = list[i % list.length].getBytes();
-                byte[] bytes = PacketUtil.makePacket(i, total, byteList);
-                
-                PacketUtil.send(socket, address, port, bytes, 0);
-            }
-            System.err.println("Batch " + start / batchSizeSend + " sent");
+        for(int i = start; i < end; i++){
+            byte[] byteList = SystemInfo.m_list[i].getBytes();
+            byte[] bytes = PacketUtil.makePacket(i, total, byteList);
+            
+            PacketUtil.send(socket, address, port, bytes, 0);
         }
-        else{
-            byte[] byteList = list[sequence % list.length].getBytes();
-            byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
+        if(start == end){
+            byte[] byteList = new byte[0];
+            byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
             
             PacketUtil.send(socket, address, port, bytes, 0);
         }
     }
     
+    // Send File batch
+    private void sendFileBatch(int file, int sequence, int batchSizeSend) throws Exception{
+        int total = FileManager.filesSendSize.get(file);
+        int start = (sequence * -1 - 1) * batchSizeSend;
+        int end = Math.min(start + batchSizeSend, total);
+        
+        for(int i = start; i < end; i++){
+            byte[] byteList = FileManager.readFile(file, i);
+            byte[] bytes = PacketUtil.makePacket(i, total, byteList);
+            
+            PacketUtil.send(socket, address, port, bytes, file);
+        }
+        if(start == end){
+            byte[] byteList = new byte[0];
+            byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
+            
+            PacketUtil.send(socket, address, port, bytes, file);
+        }
+    }
     
-    private void receiveFile(int file){ // The number of the file we are receiving
+    // Send List packet
+    private void sendListPacket(int sequence) throws Exception{
+        int total = SystemInfo.m_list.length;
+        byte[] byteList = SystemInfo.m_list[sequence].getBytes();
+        byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
+        
+        PacketUtil.send(socket, address, port, bytes, 0);
+    }
+    
+    // Send File packet
+    private void sendFilePacket(int file, int sequence) throws Exception{
+        int total = FileManager.filesSendSize.get(file);
+        byte[] byteList = FileManager.readFile(file, sequence);
+        byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
+        
+        PacketUtil.send(socket, address, port, bytes, 0);
+    }
+    
+    
+    private void receiveResponse(int file) throws Exception{ // The number of the file we are receiving
         int seq = retriveInt(data); // The sequence number of this packet
         int total = retriveInt(data); // The total number of packet of the original file
         int startBatch = (seq / SystemInfo.BatchSizeReceive); // Number of the current batch
@@ -132,12 +189,20 @@ public class PacketHandler extends Thread
         int lowestMissingSeq = SystemInfo.fileLowestMissing.get(address).get(file);
         Set<Integer> fileSeq = SystemInfo.fileSeq.get(address).get(file);
         Map<Integer, Long> fileTimers = SystemInfo.fileTimers.get(address);
+        
+        if(file == 0) SystemInfo.their_lists_lock.lock();
+        
+        if(seq < 0){
+            SystemInfo.fileLowestMissing.get(address).put(file, 0);
+            fileTimers.put(file, SystemInfo.BatchWaitTime + 1L);
+            l.unlock();
+            return;
+        }
 
         if(!fileSeq.contains(seq)){ // If we dont have already have this sequence
             fileSeq.add(seq); // Add sequence to list
             
             if (lowestMissingSeq < 0){ // If this seq/packet is the first of the batch to arrive
-                System.out.println("Batch end: " + end);
                 lowestMissingSeq = start; // Lowest missing is now first packet of the batch
                 fileTimers.put(file, 0L); // Reset the request timer
             }
@@ -170,13 +235,44 @@ public class PacketHandler extends Thread
         else {
             SystemInfo.RepetedPackets++;
             l.unlock();
-            System.err.println("Repeted packet sequence: " + seq + " ><><><><><><><><><><><><><><><><><><><><><><><>< ");
+            System.out.println("Repeted packet sequence: " + seq + " ><><><><><><><><><><><><><><><><><><><><><><><>< ");
             return; // We allready have this sequence
         }
-        l.unlock();
         
+            
         //Handle packet here -------------------------------------------------------------------------------------------------------------|+|
-        String filePart = new String(data, 0, data.length);
-        System.out.println("File part received: " + filePart + " file: " + file + " seq: " + seq + " total: " + total);
+        String filePart = new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex);
+        System.out.println("File part received: " + filePart + " end: " + end + " start: " + start);//" file: " + file + " seq: " + seq + " total: " + total);
+        if(file > 0) {
+            FileManager.writeFile(address, file, seq, Arrays.copyOfRange(data, startIndex, endIndex));
+            
+            if(lowestMissingSeq == total)
+                FileManager.close(address, file);
+        }
+        else { // Add to list
+            
+            if(!SystemInfo.their_lists.containsKey(address))
+                SystemInfo.their_lists.put(address, new HashMap<>());
+            SystemInfo.their_lists.get(address).put(seq + 1, new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex));
+            
+            if(lowestMissingSeq == total)
+                requestMissingFiles();
+            SystemInfo.their_lists_lock.unlock();
+        }
+        l.unlock();
+    }
+    
+    private void requestMissingFiles(){
+        Set<String> list = new HashSet<String>(Arrays.asList(SystemInfo.m_list));
+        for(Map.Entry<InetAddress, Map<Integer, String>> tl : SystemInfo.their_lists.entrySet()){
+            for(Map.Entry<Integer, String> e : tl.getValue().entrySet()){
+                if(!list.contains(e.getValue())){
+                    System.err.println("Starting request of file: " + e.getKey() + " name: " + e.getValue());
+                    Setup.setupForNewFile(address, e.getKey());
+                    new Requester(socket, tl.getKey(), SystemInfo.FTRapidPort, e.getKey()).start();
+                }
+                else System.out.println("This is in our list: " + e.getValue() + " number: " + e.getKey());
+            }
+        }
     }
 }

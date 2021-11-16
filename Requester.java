@@ -2,6 +2,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.io.FileOutputStream;
+import java.util.HashMap;
+import java.io.RandomAccessFile;
+import java.io.File;
 
 /**
  * Escreva a descrição da classe Requester aqui.
@@ -40,9 +45,15 @@ public class Requester extends Thread
         // Set file timer to now
         timers.put(fileNum, 0L);
         
+        try{
+            // Add fileOutputStream to fileManager
+            if(fileNum > 0) addFileToFileManager();
+        }
+        catch (Exception e){e.printStackTrace();}
+        
         while((lowestMissing = missingList.get(fileNum)) != 0){
             // Make request
-            System.err.println("Requesting sequence number: " + lowestMissing);
+            System.err.println("Requesting file: " + fileNum + " sequence number: " + lowestMissing);
             request(lowestMissing);
             
             await();
@@ -69,7 +80,7 @@ public class Requester extends Thread
         while(timers.get(fileNum) <
             (missingList.get(fileNum) < 0 ? SystemInfo.BatchWaitTime : SystemInfo.PacketWaitTime)){
             timers.put(fileNum, timers.get(fileNum) + 1);
-            System.out.println("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
+            //System.out.println("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
             SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
             
             try{
@@ -83,5 +94,17 @@ public class Requester extends Thread
         // Reset timer
         timers.put(fileNum, 0L);
         SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
+    }
+    
+    
+    private void addFileToFileManager() throws Exception{
+        if(!FileManager.filesReceive.containsKey(address))
+            FileManager.filesReceive.put(address, new ConcurrentHashMap<>());
+        
+        if(!FileManager.filesReceive.get(address).containsKey(fileNum))
+            FileManager.filesReceive.get(address).put(fileNum, 
+            new RandomAccessFile(
+            new File(SystemInfo.folder + "\\\\" + SystemInfo.their_lists.get(address).get(fileNum)),
+            "rw"));
     }
 }

@@ -18,14 +18,15 @@ public class SystemInfo
 {
     // Socket setup variables
     public final static int HttpPort = 80;
-    public final static int FTRapidPort = 80;
-    public final static int PacketSize = 1024;//256;
-    public final static int ReceiveBufferSize = 65536;
+    public static int FTRapidPort = 80;
+    public final static int PacketSize = 512;
+    public final static int ReceiveBufferSize = 65536 * 4;
     
     // Sync control variables
+    public static String folder;
     public static String[] m_list;
-    public static int ActiveClients = 0;
-    public static Map<InetAddress, String[]> their_lists = new HashMap<>();
+    public static Lock their_lists_lock = new ReentrantLock();
+    public static Map<InetAddress, Map<Integer, String>> their_lists = new HashMap<>();
     
     // Traffic control variables
     public static int Redundancy = 1;

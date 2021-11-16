@@ -16,9 +16,11 @@ import java.util.HashSet;
  */
 public class FFSync
 {
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception{ 
+        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test", "localhost"
+        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test","80", "localhost" 
         // Confirm program arguments
-        String[] addresses;
+        InetAddress[] addresses;
         try{
             if((addresses = Setup.setup(args)) == null) {
                 System.err.println("Invalid arguments (folder inexistent or ip's are down)");
@@ -36,28 +38,29 @@ public class FFSync
         // FT-Rapid
         System.out.println("Start");
         
-        DatagramSocket socketServer = new DatagramSocket(SystemInfo.FTRapidPort);
-        DatagramSocket socketClient = new DatagramSocket(8080);
-        InetAddress clientAddress = InetAddress.getByName("localhost");
-        int clientPort = SystemInfo.FTRapidPort;
+        //DatagramSocket socketServer = new DatagramSocket(SystemInfo.FTRapidPort);
+        DatagramSocket socketClient = new DatagramSocket(SystemInfo.FTRapidPort == 8080 ? 80 : 8080);
         
         Setup.setupSystemInfo(addresses);
         
-        FTRapid server = new FTRapid(socketServer);
-        server.start();
+        //Listener server = new Listener(socketServer);
+        //server.start();
         
-        FTRapid client = new FTRapid(socketClient);
+        Listener client = new Listener(socketClient);
         client.start();
         
-        Setup.requestAllLists(socketServer, addresses);
+        Setup.requestAllLists(socketClient, addresses);
         
-        System.err.println("Ended");
-        System.err.println("Unique packets received: " + SystemInfo.fileSeq.get(clientAddress).get(0).size());
-        System.err.println("Total received: " + (SystemInfo.fileSeq.get(clientAddress).get(0).size() + SystemInfo.RepetedPackets));
-        System.err.println("Repeted packets: " + SystemInfo.RepetedPackets);
+        //System.err.println("Ended");
+        //System.err.println("Unique packets received: " + SystemInfo.fileSeq.get(addresses[0]).get(0).size());
+        //System.err.println("Total received: " + (SystemInfo.fileSeq.get(addresses[0]).get(0).size() + SystemInfo.RepetedPackets));
+        //System.err.println("Repeted packets: " + SystemInfo.RepetedPackets);
         
         
-        server.join();
+        //server.join();
         client.join();
+        
+        //socketServer.close();
+        socketClient.close();
     }
 }
