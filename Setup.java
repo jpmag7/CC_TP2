@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.net.DatagramSocket;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.security.MessageDigest;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -40,8 +41,19 @@ public class Setup
     
     // Preenche a nossa lista de ficheiros
     public static void preencheLista(String pasta) throws Exception{
-        File f = new File(pasta);
-        SystemInfo.m_list = f.list();
+        File file = new File(pasta);
+        SystemInfo.m_list = file.list();
+        SystemInfo.m_list_hash = new String[SystemInfo.m_list.length];
+        
+        int j = 0;
+        for(String f : SystemInfo.m_list){
+            MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+            //Get the checksum
+            File cf = new File(pasta + "\\\\" + SystemInfo.m_list[j]);
+            String checksum = FileManager.getFileChecksum(md5Digest, cf);
+            SystemInfo.m_list_time.put(SystemInfo.m_list[j], cf.lastModified());
+            SystemInfo.m_list_hash[j++] = checksum;
+        }
         
         int i = 1;
         for(String s : SystemInfo.m_list){
@@ -108,6 +120,8 @@ public class Setup
             SystemInfo.fileSeq.put(address, new HashMap<>());
             SystemInfo.fileTimers.put(address, new HashMap<>());
             SystemInfo.their_lists.put(address, new HashMap<>());
+            SystemInfo.their_lists_hash.put(address, new HashMap<>());
+            SystemInfo.their_lists_time.put(address, new HashMap<>());
             
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }

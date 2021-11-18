@@ -109,10 +109,12 @@ public class Requester extends Thread
         if(!FileManager.filesReceive.containsKey(address))
             FileManager.filesReceive.put(address, new ConcurrentHashMap<>());
         
-        if(!FileManager.filesReceive.get(address).containsKey(fileNum))
+        if(!FileManager.filesReceive.get(address).containsKey(fileNum)){
             FileManager.filesReceive.get(address).put(fileNum, 
             new RandomAccessFile(
             new File(SystemInfo.folder + "\\\\" + SystemInfo.their_lists.get(address).get(fileNum)),
             "rw"));
+            FileManager.filesReceive.get(address).get(fileNum).setLength(0);
+        }
     }
 }

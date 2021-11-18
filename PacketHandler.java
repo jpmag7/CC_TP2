@@ -172,7 +172,7 @@ public class PacketHandler extends Thread
         Setup.log("Received request for list batch " + (sequence * -1 - 1) + " from " + address);
         
         for(int i = start; i < end; i++){
-            byte[] byteList = SystemInfo.m_list[i].getBytes();
+            byte[] byteList = (SystemInfo.m_list[i] + "§§" + SystemInfo.m_list_hash[i] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[i])).getBytes();//SystemInfo.m_list[i].getBytes();
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
             PacketUtil.send(socket, address, port, bytes, 0);
@@ -215,7 +215,7 @@ public class PacketHandler extends Thread
     private void sendListPacket(int sequence) throws Exception{
         Setup.log("Received request for list packet " + sequence + " from " + address);
         int total = SystemInfo.m_list.length;
-        byte[] byteList = SystemInfo.m_list[sequence].getBytes();
+        byte[] byteList = (SystemInfo.m_list[sequence] + "§§" + SystemInfo.m_list_hash[sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
         PacketUtil.send(socket, address, port, bytes, 0);
@@ -250,7 +250,6 @@ public class PacketHandler extends Thread
         Setup.log("Received packet " + seq + (file == 0 ? " from list" : " from file " + file) + " of " + address);
         
         int lowestMissingSeq = SystemInfo.fileLowestMissing.get(address).get(file);
-        Setup.log("lowestMissing: " + lowestMissingSeq);
         Set<Integer> fileSeq = SystemInfo.fileSeq.get(address).get(file);
         Map<Integer, Long> fileTimers = SystemInfo.fileTimers.get(address);
         
@@ -300,7 +299,6 @@ public class PacketHandler extends Thread
             Setup.log("Repeted packet sequence: " + seq + " from file: " + file + " of: " + address);
             return; // We allready have this sequence
         }
-        Setup.log("lowestMissing: " + lowestMissingSeq);
             
         //Handling packet content
         if(file > 0) { // Write to file
@@ -311,7 +309,11 @@ public class PacketHandler extends Thread
         }
         else { // Add to list
             if(seq >= 0) {
-                SystemInfo.their_lists.get(address).put(seq + 1, new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex));
+                String[] nameAndHashAndTime = new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex).split("§§", 3);
+                SystemInfo.their_lists.get(address).put(seq + 1, nameAndHashAndTime[0]);
+                SystemInfo.their_lists_hash.get(address).put(seq + 1, nameAndHashAndTime[1]);
+                SystemInfo.their_lists_time.get(address).put(nameAndHashAndTime[0], Long.parseLong(nameAndHashAndTime[2]));
+                //SystemInfo.their_lists.get(address).put(seq + 1, new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex));
             }
             
             if(lowestMissingSeq == total || seq < 0) // We received the entire list
@@ -325,9 +327,14 @@ public class PacketHandler extends Thread
         boolean asked = false;
         FileManager.filesReceived.incrementAndGet();
         Set<String> list = new HashSet<String>(Arrays.asList(SystemInfo.m_list));
+        Set<String> list_hash = new HashSet<String>(Arrays.asList(SystemInfo.m_list_hash));
+        Map<String, Long> list_time = SystemInfo.m_list_time;
+        Map<Integer, String> his_hash_list = SystemInfo.their_lists_hash.get(address);
+        Map<String, Long> his_time_list = SystemInfo.their_lists_time.get(address);
         for(Map.Entry<InetAddress, Map<Integer, String>> tl : SystemInfo.their_lists.entrySet()){
             for(Map.Entry<Integer, String> e : tl.getValue().entrySet()){
-                if(!list.contains(e.getValue())){
+                if(!list.contains(e.getValue()) ||
+                (!list_hash.contains(his_hash_list.get(e.getKey())) && his_time_list.get(e.getValue()) > list_time.get(e.getValue()))){//!list.contains(e.getValue())){
                     String value = e.getValue();
                     Integer key = e.getKey();
                     asked = true;

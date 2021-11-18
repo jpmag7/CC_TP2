@@ -26,7 +26,11 @@ public class SystemInfo
     // Sync control variables
     public static String folder;
     public static String[] m_list;
+    public static String[] m_list_hash;
+    public static Map<String, Long> m_list_time = new HashMap<>();
     public static Map<InetAddress, Map<Integer, String>> their_lists = new HashMap<>();
+    public static Map<InetAddress, Map<Integer, String>> their_lists_hash = new HashMap<>();
+    public static Map<InetAddress, Map<String, Long>> their_lists_time = new HashMap<>();
     public static Set<InetAddress> doneClients = ConcurrentHashMap.newKeySet(); 
     
     // Traffic control variables
