@@ -9,6 +9,8 @@ import java.net.DatagramSocket;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.MessageDigest;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -42,7 +44,9 @@ public class Setup
     // Preenche a nossa lista de ficheiros
     public static void preencheLista(String pasta) throws Exception{
         File file = new File(pasta);
-        SystemInfo.m_list = file.list();
+        List<String> l = new ArrayList<>();
+        listOfFiles(file, l, "");
+        SystemInfo.m_list = l.toArray(new String[0]);
         SystemInfo.m_list_hash = new String[SystemInfo.m_list.length];
         
         int j = 0;
@@ -61,6 +65,18 @@ public class Setup
             FileManager.filesSendSize.put(i, (int)Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
             FileManager.filesSend.put(i, new FileInputStream(p));
             i++;
+        }
+    }
+    
+    
+    public static void listOfFiles(File dirPath, List<String> l, String op){
+        File filesList[] = dirPath.listFiles();
+        for(File file : filesList) {
+           if(file.isFile()) {
+              l.add(op + (op == "" ? "" : "\\\\") + file.getName());
+           } else {
+              listOfFiles(file, l, op + (op == "" ? "" : "\\\\") + file.getName());
+           }
         }
     }
     

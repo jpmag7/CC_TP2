@@ -1,0 +1,45 @@
+1637199369878: Http server created
+1637199370557: Starting FTRapid
+1637199370567: Requesting list, batch 0 to localhost/127.0.0.1
+1637199370584: Received packet 0 from list of /127.0.0.1
+1637199370585: Received packet 4 from list of /127.0.0.1
+1637199370585: Received packet 1 from list of /127.0.0.1
+1637199370585: Received packet 3 from list of /127.0.0.1
+1637199370585: Received packet 2 from list of /127.0.0.1
+1637199370586: Received packet 5 from list of /127.0.0.1
+1637199370586: Received packet 6 from list of /127.0.0.1
+1637199370586: Received packet 7 from list of /127.0.0.1
+1637199370586: Received packet 8 from list of /127.0.0.1
+1637199370586: Received packet 9 from list of /127.0.0.1
+1637199370587: Full list received from: /127.0.0.1
+1637199370587: File 1 is in our list. file name: 0.txt of: /127.0.0.1
+1637199370587: File 2 is in our list. file name: 1.txt of: /127.0.0.1
+1637199370587: File 3 is in our list. file name: 2.txt of: /127.0.0.1
+1637199370587: File 4 is in our list. file name: 3.txt of: /127.0.0.1
+1637199370587: File 5 is in our list. file name: 4.txt of: /127.0.0.1
+1637199370587: File 6 is in our list. file name: 5.txt of: /127.0.0.1
+1637199370587: File 7 is in our list. file name: 6.txt of: /127.0.0.1
+1637199370587: File 8 is in our list. file name: pasta\\dentroDaPasta.txt of: /127.0.0.1
+1637199370588: Starting request of file: 9 name: pasta\\outra\\2camada.txt of: /127.0.0.1
+1637199370588: File 10 is in our list. file name: same.txt of: /127.0.0.1
+1637199370589: Requesting file 9, batch 0 to localhost/127.0.0.1
+1637199370597: Received packet 0 from file 9 of /127.0.0.1
+1637199370598: Full file: 9 received from: /127.0.0.1
+1637199370598: Closing file: 9
+1637199370599: Number files received: 2
+1637199370600: Requesting  FYN ACK to /127.0.0.1
+1637199370605: Receiving FYN signal ACK from: /127.0.0.1
+1637199370816: Received request for list batch 0 from /127.0.0.1
+1637199370818: Sending list packet 0 to /127.0.0.1
+1637199370819: Sending list packet 1 to /127.0.0.1
+1637199370819: Sending list packet 2 to /127.0.0.1
+1637199370820: Sending list packet 3 to /127.0.0.1
+1637199370821: Sending list packet 4 to /127.0.0.1
+1637199370821: Sending list packet 5 to /127.0.0.1
+1637199370822: Sending list packet 6 to /127.0.0.1
+1637199370823: Sending list packet 7 to /127.0.0.1
+1637199370824: Sending list packet 8 to /127.0.0.1
+1637199370824: Sending list packet 9 to /127.0.0.1
+1637199370836: Receiving FYN signal from: /127.0.0.1 Sending FYN ACK
+1637199380725: Exiting
+1637199380726: Closing http server
