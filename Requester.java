@@ -43,7 +43,7 @@ public class Requester extends Thread
     
     
     public void run(){
-        int lowestMissing = 0;
+        Integer lowestMissing = null;
         // Set file timer to now
         timers.put(fileNum, 0L);
         
@@ -53,9 +53,15 @@ public class Requester extends Thread
         }
         catch (Exception e){e.printStackTrace();}
         
-        while((lowestMissing = missingList.get(fileNum)) != 0){
+        while((lowestMissing = missingList.get(fileNum)) != null){
             // Make request
-            System.err.println("Requesting file: " + fileNum + " sequence number: " + lowestMissing);
+            Setup.log("Requesting " + (fileNum == 0 ? "list" :
+                      (fileNum == SystemInfo.FYN ? " FYN ACK" : "file " + fileNum)) 
+                      + (lowestMissing < 0 ? 
+                      (fileNum == SystemInfo.FYN ? "" : ", batch " + (lowestMissing * -1 - 1)) :
+                      ", sequence " + lowestMissing)
+                      + " to " + address);
+            SystemInfo.sendedPackets.incrementAndGet();
             request(lowestMissing);
             
             await();
@@ -71,7 +77,7 @@ public class Requester extends Thread
         try{
             PacketUtil.send(socket, address, port, bytes, id);
         } catch(Exception e){
-            System.err.println("Couldn't send request packet: " + e);
+            Setup.log("Couldn't send request packet: " + e);
         }
     }
     
@@ -79,16 +85,16 @@ public class Requester extends Thread
     private void await(){ // Wait here for n milliseconds
         SystemInfo.fileRequestLock.get(address).get(fileNum).lock();
         
-        while(timers.get(fileNum) <
+        while(missingList.get(fileNum) != null && timers.get(fileNum) <
             (missingList.get(fileNum) < 0 ? SystemInfo.BatchWaitTime : SystemInfo.PacketWaitTime)){
             timers.put(fileNum, timers.get(fileNum) + 1);
-            //System.out.println("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
+            //Setup.log("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
             SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
             
             try{
                 TimeUnit.MILLISECONDS.sleep(1);
             }catch (Exception e){
-                System.err.println("Error on requester wait: " + e);
+                Setup.log("Error on requester wait: " + e);
             }
             
             SystemInfo.fileRequestLock.get(address).get(fileNum).lock();

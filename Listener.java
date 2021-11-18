@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.locks.*;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 /**
  * Escreva a descrição da classe FTRapid aqui.
@@ -16,15 +17,16 @@ import java.net.SocketException;
 public class Listener extends Thread
 {  
     public static DatagramSocket socket;
+    public static boolean running = true;
     
     public Listener(DatagramSocket socket){
         this.socket = socket;
         
         try{
             socket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
-            if(SystemInfo.socketTimeout > 0) socket.setSoTimeout(SystemInfo.socketTimeout);
+            //if(SystemInfo.socketTimeout > 0) socket.setSoTimeout(SystemInfo.socketTimeout);
         }catch(Exception e){
-            System.err.println("Error setting receive buffer size: " + e);
+            Setup.log("Error setting receive buffer size: " + e);
         }
     }
     
@@ -33,13 +35,15 @@ public class Listener extends Thread
             Listen();
         }catch (SocketException e) {
         }
+        catch(SocketTimeoutException e){
+        }
         catch(Exception e){
             e.printStackTrace();
         }
     }
     
     private void Listen() throws Exception{
-        while(true){
+        while(running){
             byte[] buf = new byte[SystemInfo.PacketSize];
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
@@ -51,7 +55,7 @@ public class Listener extends Thread
     public static void checkIfAllDone(){
         if(FileManager.filesReceived.get() == FileManager.filesAsked.get() &&
            SystemInfo.their_lists.size() == SystemInfo.doneClients.size()) {
-               socket.close();
-            }
+           socket.close();
+        }
     }
 }

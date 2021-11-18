@@ -39,21 +39,20 @@ public class FileManager
     
     public static void writeFile(InetAddress address, int file, int sequence, byte[] bytes) throws Exception{
         RandomAccessFile raf = filesReceive.get(address).get(file);
-        System.out.println("Writing file: " + file + " from address: " + address);
         raf.seek(sequence * payloadSize);
         raf.write(bytes);
     }
     
-    public static void close(InetAddress address, int file) throws Exception{
-        System.out.println("Closing file: " + file);
+    public static void close(InetAddress address, int port, int file) throws Exception{
+        Setup.log("Closing file: " + file);
+        SystemInfo.filesReceived.add(SystemInfo.their_lists.get(address).get(file));
         filesReceive.get(address).get(file).close();
-        System.out.println("Files received: " + filesReceived.incrementAndGet());
+        Setup.log("Number files received: " + filesReceived.incrementAndGet());
         
         if(FileManager.filesReceived.get() == FileManager.filesAsked.get()){
-            Setup.setupForNewFile(address, SystemInfo.SHUTDOWN);
+            Setup.setupForNewFile(address, SystemInfo.FYN);
             FileManager.filesAsked.incrementAndGet();
-            System.out.println("Sending shutdown signal .-.-.-.-.-.-.-.-.-.-.-.-");
-            new Requester(Listener.socket, address, SystemInfo.FTRapidPort, SystemInfo.SHUTDOWN, SystemInfo.SHUTDOWN).start();
+            new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();

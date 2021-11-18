@@ -7,6 +7,7 @@ import java.util.concurrent.locks.*;
 import java.util.HashSet;
 import java.net.DatagramSocket;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -16,6 +17,9 @@ import java.io.FileInputStream;
  */
 public class Setup
 {
+    private static FileOutputStream logFile;
+    private static Lock l = new ReentrantLock();
+    
     // Verificar se o folder existe.
     private static boolean folderVerifica (String folder) {
         Path path = Paths.get(folder);
@@ -59,7 +63,8 @@ public class Setup
         boolean folderExists = folderVerifica(pasta);
         
         SystemInfo.FTRapidPort = Integer.parseInt(args[1]);
-        //                                            1
+        setupLogFile();
+        
         String[] addresses = Arrays.copyOfRange(args, 2, Math.min(args.length, SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize + 1));
         InetAddress[] inetAddresses = enderecoVerifica(addresses);
         
@@ -68,6 +73,29 @@ public class Setup
         preencheLista(pasta);
         
         return inetAddresses;
+    }
+    
+    
+    private static void setupLogFile(){
+        try{
+            logFile = new FileOutputStream("logs" + SystemInfo.FTRapidPort + ".txt");
+        }catch(Exception e){}
+    }
+    
+    
+    public static void log(String s){
+        l.lock();
+        try
+        {
+            logFile.write((System.currentTimeMillis() + ": " + s + "\n").getBytes());
+        }
+        catch (java.io.IOException ioe)
+        {
+            ioe.printStackTrace();
+        }
+        finally{
+            l.unlock();
+        }
     }
     
     
@@ -96,7 +124,7 @@ public class Setup
     public static void requestAllLists(DatagramSocket socket, InetAddress[] addresses) throws Exception{
         for(InetAddress address : addresses){
             FileManager.filesAsked.incrementAndGet();
-            Requester r = new Requester(socket, address, SystemInfo.FTRapidPort, 0, SystemInfo.REQUEST);
+            Requester r = new Requester(socket, address, (SystemInfo.FTRapidPort == 80 ? 8080 : 80), 0, SystemInfo.REQUEST);
             r.start();
         }
     }

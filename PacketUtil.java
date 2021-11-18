@@ -19,8 +19,8 @@ import java.io.ByteArrayInputStream;
  */
 public class PacketUtil
 {
-    private static Random r = new Random();
-    private final static boolean simulNet = false;
+    public static Random r = new Random();
+    private final static boolean simulNet = true;
     
     public static void send(DatagramSocket socket, InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
@@ -47,14 +47,14 @@ public class PacketUtil
     
     
     private static void simulNet(DatagramSocket socket, DatagramPacket packet) throws Exception{
-        float packetLossProb = 0;
-        int maxPacketDelay = 0;
+        float packetLossProb = 15;
+        int maxPacketDelay = 3;
         
         if(r.nextDouble() * 100f < 100f - packetLossProb){
             try{
                 TimeUnit.MILLISECONDS.sleep(r.nextInt(maxPacketDelay + 1));
             }catch (Exception e){
-                System.err.println("Error on SimulNet wait: " + e);
+                Setup.log("Error on SimulNet wait: " + e);
             }
             socket.send(packet);
         }

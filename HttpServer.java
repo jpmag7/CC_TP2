@@ -5,6 +5,7 @@ import java.io.OutputStreamWriter;
 import java.io.InputStreamReader;
 import java.io.BufferedWriter;
 import java.net.SocketException;
+import java.util.Arrays;
 
 /**
  * Escreva a descrição da classe HttpServer aqui.
@@ -24,16 +25,16 @@ public class HttpServer extends Thread
     public void run(){
         try{
             serverSocket = new ServerSocket(port);
-            System.err.println("Socket created in port: " + port);
         
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.err.println("New client connection");
                 
                 HttpThread thread = new HttpThread(clientSocket);
                 thread.start();
             }
-        }catch (SocketException e){}
+        }catch (SocketException e){
+            Setup.log("Closing http server");
+        }
         catch(Exception e){
             e.printStackTrace();
         }
@@ -41,7 +42,6 @@ public class HttpServer extends Thread
     
     
     public class HttpThread extends Thread {
-        
         Socket clientSocket;
         BufferedReader in;
         BufferedWriter out;
@@ -56,13 +56,13 @@ public class HttpServer extends Thread
 
         public void run(){
             try{handleRequest();}
-            catch(Exception e) {System.err.println("Couldn't write Html to client");}
+            catch(Exception e) {Setup.log("Couldn't write Html to client");}
             finally{
                 try{
                     out.close();
                     in.close();
                     clientSocket.close();
-                }catch (Exception e) {System.err.println("Couldn't close client");}
+                }catch (Exception e) {Setup.log("Couldn't close client");}
             }
         }
         
@@ -73,10 +73,18 @@ public class HttpServer extends Thread
                     //out.write("Content-Type: text/html\r\n");
                     //out.write("Content-Length: 41\r\n");
                     out.write("\r\n");
-                    out.write("<TITLE>TEST</TITLE>");
-                    out.write("<P>Hello World!</P>");
+                    out.write("<TITLE>FTRapid " + SystemInfo.FTRapidPort + "</TITLE>");
+                    out.write("<P>Folder: " + SystemInfo.folder + "</P>");
+                    out.write("<P>My files: " + Arrays.toString(SystemInfo.m_list) + "</P>");
+                    out.write("<P>Clients: " + SystemInfo.their_lists.keySet().toString() + "</P>");
+                    out.write("<P>Number of files received: " + Math.max(0, (FileManager.filesReceived.get() - 2)) +
+                    "/" + Math.max(0, (FileManager.filesAsked.get() - 2)) + "</P>");
+                    out.write("<P>Files received: " + SystemInfo.filesReceived.toString() + "</P>");
+                    out.write("<P>Transfered packets: " + SystemInfo.transferedPackets.get() + "</P>");
+                    out.write("<P>Sended packets: " + SystemInfo.sendedPackets.get() + "</P>");
+                    out.write("<P>Repeated packets: " + SystemInfo.repeatedPackets.get() + "</P>");
+                    out.write("<P>Corrupted packets: " + SystemInfo.corruptedPackets.get() + "</P>");
                 default:
-                    System.err.println("Wrong Url");
             }
         }
     }

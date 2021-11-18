@@ -6,6 +6,7 @@ import java.util.concurrent.locks.*;
 import java.net.InetAddress;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -19,7 +20,7 @@ public class SystemInfo
     // Socket setup variables
     public static int FTRapidPort = 80;
     public final static int PacketSize = 512;
-    public final static int ReceiveBufferSize = 65536 * 4;
+    public final static int ReceiveBufferSize = 65536;// * 4;
     public final static int socketTimeout = 10000;
     
     // Sync control variables
@@ -33,10 +34,16 @@ public class SystemInfo
     public static int BatchSizeReceive;
     public static long RepetedPackets = 0;
     
+    // Performance control variables
+    public static AtomicLong transferedPackets = new AtomicLong();
+    public static AtomicLong sendedPackets = new AtomicLong();
+    public static AtomicLong repeatedPackets = new AtomicLong();
+    public static AtomicLong corruptedPackets = new AtomicLong();
+    
     // ID's
     public final static int REQUEST = -1;
-    public final static int SHUTDOWN = -2;
-    public final static int SHUTDOWNACK = -3;
+    public final static int FYN = -2;
+    public final static int FYNACK = -3;
     public final static int ERROR = -50;
     
     // Security
@@ -49,4 +56,6 @@ public class SystemInfo
     public static Map<InetAddress, Map<Integer, Lock>> fileRequestLock = new HashMap();
     public static Map<InetAddress, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
     public static Map<InetAddress, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
+    public static List<String> filesRequested = new ArrayList<>();
+    public static List<String> filesReceived = new ArrayList<>();
 }

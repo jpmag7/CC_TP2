@@ -20,41 +20,52 @@ public class FFSync
     public static void main(String[] args) throws Exception{ 
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "localhost"
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "80" "localhost" 
+        // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test1" "8080" "localhost" 
         // Confirm program arguments
         InetAddress[] addresses;
         try{
             if((addresses = Setup.setup(args)) == null) {
-                System.err.println("Invalid arguments (folder inexistent or ip's are down)");
+                Setup.log("Invalid arguments (folder inexistent or ip's are down)");
+                System.out.println("Invalid arguments (folder inexistent or ip's are down)");
                 return;
             }
         }catch (Exception e){
-            System.err.println("Error on setup: " + e);
+            Setup.log("Error on setup: " + e);
             return;
         }
         
-        // Password
-        System.out.println("Password:");
-        SystemInfo.PassHash = new Scanner(System.in).nextLine().hashCode();
-        
         // Http server
-        HttpServer httpServer = new HttpServer(SystemInfo.FTRapidPort == 8080 ? 80 : 8080);
+        HttpServer httpServer = new HttpServer(SystemInfo.FTRapidPort);
         httpServer.start();
-
-        // FT-Rapid
-        System.out.println("Start");
+        Setup.log("Http server created");
         
-        DatagramSocket socketClient = new DatagramSocket(SystemInfo.FTRapidPort == 8080 ? 80 : 8080);
+        // Password
+        SystemInfo.PassHash = Arrays.hashCode(System.console().readPassword("Pasword:"));
+        System.out.println("Starting sync");
+        Setup.log("Starting FTRapid");
         
+        // Socket
+        DatagramSocket socket = new DatagramSocket(SystemInfo.FTRapidPort);
+        
+        // Setup system info variables
         Setup.setupSystemInfo(addresses);
         
-        Setup.requestAllLists(socketClient, addresses);
+        // Request lists of all clients
+        Setup.requestAllLists(socket, addresses);
         
-        Listener client = new Listener(socketClient);
+        // Start listenning for packets
+        Listener client = new Listener(socket);
         client.start();
         
+        // Wait for FYN from clients
         client.join();
+        
+        // Type to close
+        System.out.println("Syncing process has ended");
+        System.console().readPassword("Press enter to close http server and exit");
         HttpServer.serverSocket.close();
         
-        System.out.println("Folders are syncronized. Exiting");
+        Setup.log("Exiting");
+        System.out.println("Exiting");
     }
 }
