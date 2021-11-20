@@ -17,14 +17,15 @@ import java.util.Scanner;
  */
 public class FFSync
 {
+    public static Long startTime;
+    
     public static void main(String[] args) throws Exception{ 
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "localhost"
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "80" "localhost" 
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test1" "8080" "localhost" 
         // Confirm program arguments
-        InetAddress[] addresses;
         try{
-            if((addresses = Setup.setup(args)) == null) {
+            if(!Setup.setup(args)) {
                 Setup.log("Invalid arguments (folder inexistent or ip's are down)");
                 System.out.println("Invalid arguments (folder inexistent or ip's are down)");
                 return;
@@ -43,15 +44,16 @@ public class FFSync
         SystemInfo.PassHash = Arrays.hashCode(System.console().readPassword("Pasword:"));
         System.out.println("Starting sync");
         Setup.log("Starting FTRapid");
+        startTime = System.currentTimeMillis();
         
         // Socket
         DatagramSocket socket = new DatagramSocket(SystemInfo.FTRapidPort);
         
         // Setup system info variables
-        Setup.setupSystemInfo(addresses);
+        Setup.setupSystemInfo();
         
         // Request lists of all clients
-        Setup.requestAllLists(socket, addresses);
+        Setup.requestAllLists(socket);
         
         // Start listenning for packets
         Listener client = new Listener(socket);

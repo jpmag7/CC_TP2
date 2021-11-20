@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.concurrent.locks.*;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 /**
  * Escreva a descrição da classe FTRapid aqui.
@@ -53,9 +55,29 @@ public class Listener extends Thread
     }
     
     public static void checkIfAllDone(){
-        if(FileManager.filesReceived.get() == FileManager.filesAsked.get() &&
-           SystemInfo.their_lists.size() == SystemInfo.doneClients.size()) {
-           socket.close();
+        int doneWith = 0;
+        for(String a : SystemInfo.their_lists.keySet()){
+            if(SystemInfo.fileLowestMissing.get(a).get(SystemInfo.FYN) == null) doneWith++;
+        }
+        
+        if(SystemInfo.their_lists.size() == doneWith &&
+           SystemInfo.their_lists.size() == SystemInfo.clientsDoneWithMe.size()) {
+            Long totalTime = 0L;
+            for(Map<Integer, Long> e : SystemInfo.fileTransferTime.values()){
+                for(Long l : e.values()) {
+                    totalTime += l;
+                }
+            } 
+            
+            double transTime = (System.currentTimeMillis() - FFSync.startTime) / 1000d;
+            System.out.println("Sync took: " + transTime + " seconds");
+            Setup.log("Sync took: " + transTime + " seconds");
+            
+            double transSpeed = totalTime == 0 ? 0 : (SystemInfo.transferedPackets.get() * SystemInfo.PacketSize) / (totalTime / 1000d);
+            System.out.println("Transfer speed: " + transSpeed + " bytes/second");
+            Setup.log("Transfer speed: " + transSpeed + " bytes/second");
+            
+            socket.close();
         }
     }
 }

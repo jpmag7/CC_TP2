@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.io.RandomAccessFile;
 import java.io.File;
+import java.nio.file.Paths;
 
 /**
  * Escreva a descrição da classe Requester aqui.
@@ -25,6 +26,7 @@ public class Requester extends Thread
     private byte[] receiveBufferSize;
     private Map<Integer, Long> timers;
     private Map<Integer, Integer> missingList;
+    private String addString;
     
     
     public Requester(DatagramSocket socket, InetAddress address, int port, int fileNum, int id){
@@ -33,8 +35,9 @@ public class Requester extends Thread
         this.port = port;
         this.fileNum = fileNum;
         this.id = id;
-        timers = SystemInfo.fileTimers.get(address);
-        missingList = SystemInfo.fileLowestMissing.get(address);
+        this.addString = "" + address.toString().substring(address.toString().indexOf("/")) + ":" + port;
+        timers = SystemInfo.fileTimers.get(addString);
+        missingList = SystemInfo.fileLowestMissing.get(addString);
         byte[] file = PacketUtil.intToBytes(fileNum);
         receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
         bytes = new byte[file.length + file.length + receiveBufferSize.length];
@@ -60,7 +63,7 @@ public class Requester extends Thread
                       + (lowestMissing < 0 ? 
                       (fileNum == SystemInfo.FYN ? "" : ", batch " + (lowestMissing * -1 - 1)) :
                       ", sequence " + lowestMissing)
-                      + " to " + address);
+                      + " to " + addString);
             SystemInfo.sendedPackets.incrementAndGet();
             request(lowestMissing);
             
@@ -83,13 +86,13 @@ public class Requester extends Thread
     
     
     private void await(){ // Wait here for n milliseconds
-        SystemInfo.fileRequestLock.get(address).get(fileNum).lock();
+        SystemInfo.fileRequestLock.get(addString).get(fileNum).lock();
         
         while(missingList.get(fileNum) != null && timers.get(fileNum) <
             (missingList.get(fileNum) < 0 ? SystemInfo.BatchWaitTime : SystemInfo.PacketWaitTime)){
             timers.put(fileNum, timers.get(fileNum) + 1);
             //Setup.log("Timer: " + timers.get(fileNum) + " waiting for: " + missingList.get(fileNum));
-            SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
+            SystemInfo.fileRequestLock.get(addString).get(fileNum).unlock();
             
             try{
                 TimeUnit.MILLISECONDS.sleep(1);
@@ -97,26 +100,26 @@ public class Requester extends Thread
                 Setup.log("Error on requester wait: " + e);
             }
             
-            SystemInfo.fileRequestLock.get(address).get(fileNum).lock();
+            SystemInfo.fileRequestLock.get(addString).get(fileNum).lock();
         }
         // Reset timer
         timers.put(fileNum, 0L);
-        SystemInfo.fileRequestLock.get(address).get(fileNum).unlock();
+        SystemInfo.fileRequestLock.get(addString).get(fileNum).unlock();
     }
     
     
     private void addFileToFileManager() throws Exception{
-        if(!FileManager.filesReceive.containsKey(address))
-            FileManager.filesReceive.put(address, new ConcurrentHashMap<>());
+        if(!FileManager.filesReceive.containsKey(addString))
+            FileManager.filesReceive.put(addString, new ConcurrentHashMap<>());
         
-        if(!FileManager.filesReceive.get(address).containsKey(fileNum)){
-            File f = new File(SystemInfo.folder + "\\\\" + SystemInfo.their_lists.get(address).get(fileNum));
+        if(!FileManager.filesReceive.get(addString).containsKey(fileNum)){
+            File f = new File(Paths.get(SystemInfo.folder, SystemInfo.their_lists.get(addString).get(fileNum)).toString());
             f.getParentFile().mkdirs();
-            FileManager.filesReceive.get(address).put(fileNum, 
+            FileManager.filesReceive.get(addString).put(fileNum, 
             new RandomAccessFile(
             f,
             "rw"));
-            FileManager.filesReceive.get(address).get(fileNum).setLength(0);
+            FileManager.filesReceive.get(addString).get(fileNum).setLength(0);
         }
     }
 }

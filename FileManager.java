@@ -20,15 +20,15 @@ import java.io.File;
 public class FileManager
 {
     public static int payloadSize = SystemInfo.PacketSize - 24;
-    public static AtomicInteger filesAsked = new AtomicInteger();
-    public static AtomicInteger filesReceived = new AtomicInteger();
+    public static Map<String, AtomicInteger> filesAsked = new ConcurrentHashMap<>();
+    public static Map<String, AtomicInteger> filesReceived = new ConcurrentHashMap<>();
     
     // Send
-    public static Map<Integer, Integer> filesSendSize = new HashMap<>();
+    public static Map<Integer, Integer> filesSendSize = new ConcurrentHashMap<>();
     public static Map<Integer, FileInputStream> filesSend = new ConcurrentHashMap<>();
     
     // Receive
-    public static Map<InetAddress, Map<Integer, RandomAccessFile>> filesReceive = new ConcurrentHashMap<>();
+    public static Map<String, Map<Integer, RandomAccessFile>> filesReceive = new ConcurrentHashMap<>();
     
     public static byte[] readFile(int file, int sequence) throws Exception{
         FileInputStream f = filesSend.get(file);
@@ -38,21 +38,21 @@ public class FileManager
         return size > 0 ? Arrays.copyOf(bytes, size) : new byte[0];
     }
     
-    public static void writeFile(InetAddress address, int file, int sequence, byte[] bytes) throws Exception{
+    public static void writeFile(String address, int file, int sequence, byte[] bytes) throws Exception{
         RandomAccessFile raf = filesReceive.get(address).get(file);
         raf.seek(sequence * payloadSize);
         raf.write(bytes);
     }
     
-    public static void close(InetAddress address, int port, int file) throws Exception{
+    public static void close(InetAddress address, int port, String addString, int file) throws Exception{
         Setup.log("Closing file: " + file);
-        SystemInfo.filesReceived.add(SystemInfo.their_lists.get(address).get(file));
-        filesReceive.get(address).get(file).close();
-        Setup.log("Number files received: " + filesReceived.incrementAndGet());
+        SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
+        filesReceive.get(addString).get(file).close();
+        SystemInfo.fileTransferTime.get(addString).put(file, System.currentTimeMillis() - SystemInfo.fileTransferTime.get(addString).get(file));
+        Setup.log("Number files received: " + filesReceived.get(addString).incrementAndGet() + "/" + filesAsked.get(addString).get());
         
-        if(FileManager.filesReceived.get() == FileManager.filesAsked.get()){
-            Setup.setupForNewFile(address, SystemInfo.FYN);
-            FileManager.filesAsked.incrementAndGet();
+        if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
+            Setup.setupForNewFile(addString, SystemInfo.FYN);
             new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
@@ -60,8 +60,7 @@ public class FileManager
     }
     
     
-    public static String getFileChecksum(MessageDigest digest, File file) throws Exception
-    {
+    public static String getFileChecksum(MessageDigest digest, File file) throws Exception{
         //Get file input stream for reading the file content
         FileInputStream fis = new FileInputStream(file);
          
@@ -72,7 +71,7 @@ public class FileManager
         //Read file data and update in message digest
         while ((bytesCount = fis.read(byteArray)) != -1) {
             digest.update(byteArray, 0, bytesCount);
-        };
+        }
          
         //close the stream; We don't need it now.
         fis.close();
@@ -89,6 +88,6 @@ public class FileManager
         }
          
         //return complete hash
-       return sb.toString();
+        return sb.toString();
     }
 }

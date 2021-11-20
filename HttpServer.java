@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.BufferedWriter;
 import java.net.SocketException;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Escreva a descrição da classe HttpServer aqui.
@@ -77,8 +78,9 @@ public class HttpServer extends Thread
                     out.write("<P>Folder: " + SystemInfo.folder + "</P>");
                     out.write("<P>My files: " + Arrays.toString(SystemInfo.m_list) + "</P>");
                     out.write("<P>Clients: " + SystemInfo.their_lists.keySet().toString() + "</P>");
-                    out.write("<P>Number of files received: " + Math.max(0, (FileManager.filesReceived.get() - 2)) +
-                    "/" + Math.max(0, (FileManager.filesAsked.get() - 2)) + "</P>");
+                    out.write("<P>Number of files received: " + 
+                        Math.max(0, (FileManager.filesReceived.values().stream().mapToInt(AtomicInteger::get).sum() - 2)) +
+                        "/" + Math.max(0, (FileManager.filesAsked.values().stream().mapToInt(AtomicInteger::get).sum() - 2)) + "</P>");
                     out.write("<P>Files received: " + SystemInfo.filesReceived.toString() + "</P>");
                     out.write("<P>Transfered packets: " + SystemInfo.transferedPackets.get() + "</P>");
                     out.write("<P>Sended packets: " + SystemInfo.sendedPackets.get() + "</P>");

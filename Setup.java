@@ -11,6 +11,8 @@ import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.StringTokenizer;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -22,6 +24,8 @@ public class Setup
 {
     private static FileOutputStream logFile;
     private static Lock l = new ReentrantLock();
+    private static InetAddress[] addresses;
+    private static int[] ports;
     
     // Verificar se o folder existe.
     private static boolean folderVerifica (String folder) {
@@ -30,15 +34,27 @@ public class Setup
     }
     
     // Verifica se o endereço do parceiro é o correto;
-    private static InetAddress[] enderecoVerifica (String[] enderecos) throws Exception {
-        InetAddress[] addresses = new InetAddress[enderecos.length];
+    private static void enderecoVerifica (String[] enderecos) throws Exception {
+        addresses = new InetAddress[enderecos.length];
+        ports = new int[enderecos.length];
         int i = 0;
         for(String add : enderecos){
-            InetAddress address = InetAddress.getByName(add);
-            if (!address.isReachable(500)) return null;
-            else addresses[i++] = address;
+            String[] addAndPort = add.split(":", 2);
+            InetAddress address = InetAddress.getByName(addAndPort[0]);
+            if (!address.isReachable(500)) {
+                addresses = null;
+                return;
+            }
+            else {
+                try{
+                    ports[i] = addAndPort.length == 1 ? SystemInfo.DefaultFTRapidPort : Integer.parseInt(addAndPort[1]);
+                }catch(NumberFormatException e){
+                    Setup.log("Invalid port: " + addAndPort[1] + " on address " + addAndPort[0]);
+                    System.out.println("Invalid port: " + addAndPort[1] + " on address " + addAndPort[0]);
+                }
+                addresses[i++] = address;
+            }
         }
-        return addresses;
     } 
     
     // Preenche a nossa lista de ficheiros
@@ -53,7 +69,7 @@ public class Setup
         for(String f : SystemInfo.m_list){
             MessageDigest md5Digest = MessageDigest.getInstance("MD5");
             //Get the checksum
-            File cf = new File(pasta + "\\\\" + SystemInfo.m_list[j]);
+            File cf = new File(Paths.get(pasta, SystemInfo.m_list[j]).toString());
             String checksum = FileManager.getFileChecksum(md5Digest, cf);
             SystemInfo.m_list_time.put(SystemInfo.m_list[j], cf.lastModified());
             SystemInfo.m_list_hash[j++] = checksum;
@@ -61,7 +77,7 @@ public class Setup
         
         int i = 1;
         for(String s : SystemInfo.m_list){
-            String p = pasta + "\\\\" + s;
+            String p = Paths.get(pasta, s).toString();
             FileManager.filesSendSize.put(i, (int)Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
             FileManager.filesSend.put(i, new FileInputStream(p));
             i++;
@@ -73,41 +89,53 @@ public class Setup
         File filesList[] = dirPath.listFiles();
         for(File file : filesList) {
            if(file.isFile()) {
-              l.add(op + (op == "" ? "" : "\\\\") + file.getName());
+              l.add(op == "" ? file.getName() : Paths.get(op, file.getName()).toString());
            } else {
-              listOfFiles(file, l, op + (op == "" ? "" : "\\\\") + file.getName());
+              listOfFiles(file, l, op == "" ? file.getName() : Paths.get(op, file.getName()).toString());
            }
         }
     }
     
     
-    public static InetAddress[] setup(String[] args) throws Exception{
-        if(args.length < 3){ // 2
+    public static boolean setup(String[] args) throws Exception{
+        if(args.length < 2){
             System.out.println("Invalid arguments");
-            return null;
+            return false;
         }
         
         String pasta = args[0];
         boolean folderExists = folderVerifica(pasta);
-        
-        SystemInfo.FTRapidPort = Integer.parseInt(args[1]);
+        boolean customPort = true;
+        int myPort = SystemInfo.DefaultFTRapidPort;
+        try{
+            myPort = Integer.parseInt(args[1]);
+        }catch (NumberFormatException e){
+            customPort = false;
+        }
+        SystemInfo.FTRapidPort = myPort;
         setupLogFile();
+        Setup.log("Setting FTRapid port to: " + SystemInfo.FTRapidPort);
         
-        String[] addresses = Arrays.copyOfRange(args, 2, Math.min(args.length, SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize + 1));
-        InetAddress[] inetAddresses = enderecoVerifica(addresses);
+        String[] addressesString = Arrays.copyOfRange(args, (customPort ? 2 : 1), Math.min(args.length, SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize + 1));
+        enderecoVerifica(addressesString);
         
-        if(inetAddresses == null || !folderExists) return null;
+        if(addresses == null || !folderExists) return false;
         SystemInfo.folder = pasta;
         preencheLista(pasta);
         
-        return inetAddresses;
+        return true;
     }
     
     
     private static void setupLogFile(){
         try{
-            logFile = new FileOutputStream("logs" + SystemInfo.FTRapidPort + ".txt");
-        }catch(Exception e){}
+            String add = InetAddress.getByName("localhost").toString().split("/", 2)[1];
+            add = add.replace(".", "_");
+            logFile = new FileOutputStream(new File("logs" + add + "_" + SystemInfo.FTRapidPort + ".txt"));
+        }catch(Exception e){
+            e.printStackTrace();
+            System.out.println("ERROR openning log file");
+        }
     }
     
     
@@ -127,10 +155,12 @@ public class Setup
     }
     
     
-    public static void setupSystemInfo(InetAddress[] addresses) throws Exception{
+    public static void setupSystemInfo() throws Exception{
         SystemInfo.BatchSizeReceive = SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize / addresses.length;
+        int i = 0;
         
-        for(InetAddress address : addresses){
+        for(InetAddress add : addresses){
+            String address = "" + add.toString().substring(add.toString().indexOf("/")) + ":" + ports[i++];
             SystemInfo.fileRequestLock.put(address, new HashMap<>());
             SystemInfo.fileLowestMissing.put(address, new HashMap<>());
             SystemInfo.fileSeq.put(address, new HashMap<>());
@@ -138,23 +168,27 @@ public class Setup
             SystemInfo.their_lists.put(address, new HashMap<>());
             SystemInfo.their_lists_hash.put(address, new HashMap<>());
             SystemInfo.their_lists_time.put(address, new HashMap<>());
+            SystemInfo.fileTransferTime.put(address, new HashMap<>());
+            FileManager.filesAsked.put(address, new AtomicInteger());
+            FileManager.filesReceived.put(address, new AtomicInteger());
+            
+            SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1);
             
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }
     }
     
-    
-    public static void setupForNewFile(InetAddress address, int file){
+    public static void setupForNewFile(String address, int file){
         SystemInfo.fileRequestLock.get(address).put(file, new ReentrantLock());
         SystemInfo.fileLowestMissing.get(address).put(file, -1);
         SystemInfo.fileSeq.get(address).put(file, new HashSet<Integer>());
     }
     
     
-    public static void requestAllLists(DatagramSocket socket, InetAddress[] addresses) throws Exception{
+    public static void requestAllLists(DatagramSocket socket) throws Exception{
+        int i = 0;
         for(InetAddress address : addresses){
-            FileManager.filesAsked.incrementAndGet();
-            Requester r = new Requester(socket, address, (SystemInfo.FTRapidPort == 80 ? 8080 : 80), 0, SystemInfo.REQUEST);
+            Requester r = new Requester(socket, address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
         }
     }

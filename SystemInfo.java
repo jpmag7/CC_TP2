@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SystemInfo
 {
     // Socket setup variables
+    public final static int DefaultFTRapidPort = 80;
     public static int FTRapidPort = 80;
     public final static int PacketSize = 512;
     public final static int ReceiveBufferSize = 65536;// * 4;
@@ -28,14 +29,14 @@ public class SystemInfo
     public static String[] m_list;
     public static String[] m_list_hash;
     public static Map<String, Long> m_list_time = new HashMap<>();
-    public static Map<InetAddress, Map<Integer, String>> their_lists = new HashMap<>();
-    public static Map<InetAddress, Map<Integer, String>> their_lists_hash = new HashMap<>();
-    public static Map<InetAddress, Map<String, Long>> their_lists_time = new HashMap<>();
-    public static Set<InetAddress> doneClients = ConcurrentHashMap.newKeySet(); 
+    public static Map<String, Map<Integer, String>> their_lists = new HashMap<>();
+    public static Map<String, Map<Integer, String>> their_lists_hash = new HashMap<>();
+    public static Map<String, Map<String, Long>> their_lists_time = new HashMap<>();
+    public static Set<String> clientsDoneWithMe = ConcurrentHashMap.newKeySet();
     
     // Traffic control variables
     public static int Redundancy = 1;
-    public static int BatchSizeReceive;
+    public static int BatchSizeReceive = -1;
     public static long RepetedPackets = 0;
     
     // Performance control variables
@@ -56,10 +57,11 @@ public class SystemInfo
     // Request control variables
     public final static int BatchWaitTime = 200; // milliseconds
     public final static int PacketWaitTime = 10; // milliseconds
-    public static Map<InetAddress, Map<Integer, Long>> fileTimers = new HashMap<>();
-    public static Map<InetAddress, Map<Integer, Lock>> fileRequestLock = new HashMap();
-    public static Map<InetAddress, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
-    public static Map<InetAddress, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
+    public static Map<String, Map<Integer, Long>> fileTimers = new HashMap<>();
+    public static Map<String, Map<Integer, Lock>> fileRequestLock = new HashMap();
+    public static Map<String, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
+    public static Map<String, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
+    public static Map<String, Map<Integer, Long>> fileTransferTime = new HashMap<>();
     public static List<String> filesRequested = new ArrayList<>();
-    public static List<String> filesReceived = new ArrayList<>();
+    public static Set<String> filesReceived = new HashSet<>();
 }
