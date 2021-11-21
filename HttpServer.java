@@ -71,18 +71,17 @@ public class HttpServer extends Thread
             switch (url){
                 case "/":
                     out.write("HTTP/1.1 200 OK\r\n");
-                    //out.write("Content-Type: text/html\r\n");
+                    out.write("Content-Type: text/html\r\n");
                     //out.write("Content-Length: 41\r\n");
                     out.write("\r\n");
-                    out.write("<TITLE>FTRapid " + SystemInfo.FTRapidPort + "</TITLE>");
-                    out.write("<P>Folder: " + SystemInfo.folder + "</P>");
+                    out.write("<TITLE>FFSync</TITLE>");
+                    out.write("<P>My folder: " + SystemInfo.folder + "</P>");
                     out.write("<P>My files: " + Arrays.toString(SystemInfo.m_list) + "</P>");
                     out.write("<P>Clients: " + SystemInfo.their_lists.keySet().toString() + "</P>");
-                    out.write("<P>Number of files received: " + 
-                        Math.max(0, (FileManager.filesReceived.values().stream().mapToInt(AtomicInteger::get).sum() - 2)) +
-                        "/" + Math.max(0, (FileManager.filesAsked.values().stream().mapToInt(AtomicInteger::get).sum() - 2)) + "</P>");
+                    out.write("<P>Number of files received: " + SystemInfo.filesReceived.size() + "/" + SystemInfo.filesRequested.size() + "</P>");
+                    out.write("<P>Files requested: " + SystemInfo.filesRequested.toString() + "</P>");
                     out.write("<P>Files received: " + SystemInfo.filesReceived.toString() + "</P>");
-                    out.write("<P>Transfered packets: " + SystemInfo.transferedPackets.get() + "</P>");
+                    out.write("<P>Received packets: " + SystemInfo.transferedPackets.get() + "</P>");
                     out.write("<P>Sended packets: " + SystemInfo.sendedPackets.get() + "</P>");
                     out.write("<P>Repeated packets: " + SystemInfo.repeatedPackets.get() + "</P>");
                     out.write("<P>Corrupted packets: " + SystemInfo.corruptedPackets.get() + "</P>");

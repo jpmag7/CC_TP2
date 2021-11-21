@@ -67,20 +67,30 @@ public class Setup
         
         int j = 0;
         for(String f : SystemInfo.m_list){
-            MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-            //Get the checksum
-            File cf = new File(Paths.get(pasta, SystemInfo.m_list[j]).toString());
-            String checksum = FileManager.getFileChecksum(md5Digest, cf);
-            SystemInfo.m_list_time.put(SystemInfo.m_list[j], cf.lastModified());
-            SystemInfo.m_list_hash[j++] = checksum;
+            if(Files.isRegularFile(Paths.get(pasta, f))){
+                MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+                //Get the checksum
+                File cf = new File(Paths.get(pasta, SystemInfo.m_list[j]).toString());
+                String checksum = FileManager.getFileChecksum(md5Digest, cf);
+                SystemInfo.m_list_time.put(SystemInfo.m_list[j], cf.lastModified());
+                SystemInfo.m_list_hash[j++] = checksum;
+            }
+            else { // is empty directory
+                File cf = new File(Paths.get(pasta, SystemInfo.m_list[j]).toString());
+                SystemInfo.m_list_time.put(SystemInfo.m_list[j], cf.lastModified());
+                SystemInfo.m_list_hash[j++] = "0";
+            }
         }
         
         int i = 1;
         for(String s : SystemInfo.m_list){
-            String p = Paths.get(pasta, s).toString();
-            FileManager.filesSendSize.put(i, (int)Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
-            FileManager.filesSend.put(i, new FileInputStream(p));
-            i++;
+            if(Files.isRegularFile(Paths.get(pasta, s))){
+                String p = Paths.get(pasta, s).toString();
+                FileManager.filesSendSize.put(i, (int)Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
+                FileManager.filesSend.put(i, new FileInputStream(p));
+                i++;
+            }
+            else i++;
         }
     }
     
@@ -93,6 +103,10 @@ public class Setup
            } else {
               listOfFiles(file, l, op == "" ? file.getName() : Paths.get(op, file.getName()).toString());
            }
+        }
+        // If is empty folder
+        if(filesList.length == 0) {
+            l.add(Paths.get(op, "§").toString().replace("§", ""));
         }
     }
     

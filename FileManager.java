@@ -60,6 +60,22 @@ public class FileManager
     }
     
     
+    public static void close(InetAddress address, int port, String addString, int file, boolean isFolder) throws Exception{
+        Setup.log("Closing file: " + file);
+        SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
+        //filesReceive.get(addString).get(file).close();
+        SystemInfo.fileTransferTime.get(addString).put(file, System.currentTimeMillis() - SystemInfo.fileTransferTime.get(addString).get(file));
+        Setup.log("Number files received: " + filesReceived.get(addString).incrementAndGet() + "/" + filesAsked.get(addString).get());
+        
+        if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
+            Setup.setupForNewFile(addString, SystemInfo.FYN);
+            new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+        }
+        
+        Listener.checkIfAllDone();
+    }
+    
+    
     public static String getFileChecksum(MessageDigest digest, File file) throws Exception{
         //Get file input stream for reading the file content
         FileInputStream fis = new FileInputStream(file);

@@ -40,6 +40,7 @@ public class SystemInfo
     public static long RepetedPackets = 0;
     
     // Performance control variables
+    public static Long startTime = 0L;
     public static AtomicLong transferedPackets = new AtomicLong();
     public static AtomicLong sendedPackets = new AtomicLong();
     public static AtomicLong repeatedPackets = new AtomicLong();
@@ -62,6 +63,6 @@ public class SystemInfo
     public static Map<String, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
     public static Map<String, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
     public static Map<String, Map<Integer, Long>> fileTransferTime = new HashMap<>();
-    public static List<String> filesRequested = new ArrayList<>();
+    public static Set<String> filesRequested = new HashSet<>();
     public static Set<String> filesReceived = new HashSet<>();
 }

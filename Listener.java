@@ -69,13 +69,13 @@ public class Listener extends Thread
                 }
             } 
             
-            double transTime = (System.currentTimeMillis() - FFSync.startTime) / 1000d;
+            double transTime = (System.currentTimeMillis() - SystemInfo.startTime) / 1000d;
             System.out.println("Sync took: " + transTime + " seconds");
             Setup.log("Sync took: " + transTime + " seconds");
             
             double transSpeed = totalTime == 0 ? 0 : (SystemInfo.transferedPackets.get() * SystemInfo.PacketSize) / (totalTime / 1000d);
-            System.out.println("Transfer speed: " + transSpeed + " bytes/second");
-            Setup.log("Transfer speed: " + transSpeed + " bytes/second");
+            System.out.println("Download speed: " + transSpeed + " bytes/second");
+            Setup.log("Download speed: " + transSpeed + " bytes/second");
             
             socket.close();
         }

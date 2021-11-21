@@ -16,9 +16,7 @@ import java.util.Scanner;
  * @version (número de versão ou data)
  */
 public class FFSync
-{
-    public static Long startTime;
-    
+{   
     public static void main(String[] args) throws Exception{ 
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "localhost"
         // Args -> "C:\\Users\\jpmag\\OneDrive\\Ambiente de Trabalho\\Test" "80" "localhost" 
@@ -44,7 +42,6 @@ public class FFSync
         SystemInfo.PassHash = Arrays.hashCode(System.console().readPassword("Pasword:"));
         System.out.println("Starting sync");
         Setup.log("Starting FTRapid");
-        startTime = System.currentTimeMillis();
         
         // Socket
         DatagramSocket socket = new DatagramSocket(SystemInfo.FTRapidPort);

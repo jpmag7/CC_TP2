@@ -47,6 +47,8 @@ public class PacketHandler extends Thread
         this.port = packet.getPort();
         this.addString = "" + address + ":" + port;
         
+        if(SystemInfo.startTime == 0L) SystemInfo.startTime = System.currentTimeMillis();
+        
         try{
             handlePacket();
         }catch(Exception e) {
@@ -332,16 +334,20 @@ public class PacketHandler extends Thread
         Map<String, Long> his_time_list = SystemInfo.their_lists_time.get(addString);
         
         for(Map.Entry<Integer, String> e : SystemInfo.their_lists.get(addString).entrySet()){
-            if(!list.contains(e.getValue()) ||
-            (!list_hash.contains(his_hash_list.get(e.getKey())) && his_time_list.get(e.getValue()) > list_time.get(e.getValue()))){//!list.contains(e.getValue())){
+            if(!list.contains(e.getValue()) || // If I dont have a file with this name
+              (!sameHash(e.getValue(), SystemInfo.m_list, SystemInfo.m_list_hash, his_hash_list.get(e.getKey())) &&//!list_hash.contains(his_hash_list.get(e.getKey())) &&
+               his_time_list.get(e.getValue()) > list_time.get(e.getValue()))){ // If files have same name but are different ask for the most recent
+                   
                 String value = e.getValue();
                 Integer key = e.getKey();
+                
                 asked = true;
                 SystemInfo.filesRequested.add(value);
-                Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
                 FileManager.filesAsked.get(addString).incrementAndGet();
                 Setup.setupForNewFile(addString, key);
                 SystemInfo.fileTransferTime.get(addString).put(key, System.currentTimeMillis());
+                Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
+                
                 new Requester(socket, address, port, key, SystemInfo.REQUEST).start();
             }
             else Setup.log("File " + e.getKey() + " is in our list. file name: " + e.getValue() + " of: " + addString);
@@ -351,5 +357,19 @@ public class PacketHandler extends Thread
             Setup.setupForNewFile(addString, SystemInfo.FYN);
             new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
+    }
+    
+    private boolean sameHash(String fileName, String[] myList, String[] myHashList, String hisHash){
+        int pos = -1;
+        
+        for(int i = 0; i < myHashList.length; i++){
+            if(myList[i].equals(fileName)) {
+                pos = i;
+                break;
+            }
+        }
+        
+        if(myHashList[pos].equals(hisHash)) return true;
+        return false;
     }
 }
