@@ -127,7 +127,7 @@ public class Setup
             customPort = false;
         }
         SystemInfo.FTRapidPort = myPort;
-        setupLogFile();
+        setupLogFile(pasta);
         Setup.log("Setting FTRapid port to: " + SystemInfo.FTRapidPort);
         
         String[] addressesString = Arrays.copyOfRange(args, (customPort ? 2 : 1), Math.min(args.length, SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize + 1));
@@ -141,11 +141,11 @@ public class Setup
     }
     
     
-    private static void setupLogFile(){
+    private static void setupLogFile(String pasta){
         try{
-            String add = InetAddress.getByName("localhost").toString().split("/", 2)[1];
-            add = add.replace(".", "_");
-            logFile = new FileOutputStream(new File("logs" + add + "_" + SystemInfo.FTRapidPort + ".txt"));
+            File file = new File(pasta);
+            String folderName = file.getName();
+            logFile = new FileOutputStream(new File("logs" + folderName + ".txt"));
         }catch(Exception e){
             e.printStackTrace();
             System.out.println("ERROR openning log file");
