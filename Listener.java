@@ -74,8 +74,8 @@ public class Listener extends Thread
             Setup.log("Sync took: " + transTime + " seconds");
             
             double transSpeed = totalTime == 0 ? 0 : (SystemInfo.transferedPackets.get() * SystemInfo.PacketSize) / (totalTime / 1000d);
-            System.out.println("Download speed: " + transSpeed + " bytes/second");
-            Setup.log("Download speed: " + transSpeed + " bytes/second");
+            System.out.println("Download speed: " + (transSpeed * 8) + " bits/second");
+            Setup.log("Download speed: " + (transSpeed * 8) + " bits/second");
             
             socket.close();
         }

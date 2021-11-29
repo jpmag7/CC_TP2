@@ -105,7 +105,7 @@ public class Setup
            }
         }
         // If is empty folder
-        if(filesList.length == 0) {
+        if(filesList.length == 0 && !op.equals("")) {
             l.add(Paths.get(op, "§").toString().replace("§", ""));
         }
     }
