@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PacketHandler extends Thread
 {
-    private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] data;
     private InetAddress address;
@@ -35,8 +34,7 @@ public class PacketHandler extends Thread
     private int startIndex = 0;
     private int endIndex = 0;
     
-    public PacketHandler(DatagramSocket socket, DatagramPacket packet){
-        this.socket = socket;
+    public PacketHandler(DatagramPacket packet){
         this.packet = packet;
     }
     
@@ -67,7 +65,7 @@ public class PacketHandler extends Thread
                 if(!FYNReceived.containsKey(addString)) FYNReceived.put(addString, new AtomicInteger());
                 int currentFYN = FYNReceived.get(addString).incrementAndGet();//FYNReceived.incrementAndGet();
                 Setup.log("Receiving FYN signal from: " + addString + " Sending FYN ACK");
-                PacketUtil.send(socket, address, port, new byte[0], SystemInfo.FYNACK);
+                PacketUtil.send(address, port, new byte[0], SystemInfo.FYNACK);
                 waitForFYN(currentFYN);
                 break;
             case SystemInfo.FYNACK: // I'm done with him
@@ -86,6 +84,7 @@ public class PacketHandler extends Thread
         }
     }
     
+    
     private void handleCorruption(){
         Setup.log("Corrupted packet from: " + addString);
         SystemInfo.corruptedPackets.incrementAndGet();
@@ -99,20 +98,12 @@ public class PacketHandler extends Thread
                 Setup.log("Error on Corruption wait: " + e);
             }
             
-            // Get all locks
-            for(Map<Integer, Lock> m : SystemInfo.fileRequestLock.values())
-                for(Lock l : m.values()) l.lock();
+            Listener.stopAsking();
             
-            // Stop all request loops
-            for(Map<Integer, Long> m : SystemInfo.fileLowestMissing.values())
-                m.replaceAll((k, v) -> v = null);
-            
-            for(Map<Integer, Lock> m : SystemInfo.fileRequestLock.values())
-                for(Lock l : m.values()) l.unlock();
-            
-            socket.close();
+            SystemInfo.mySocket.close();
         }
     }
+    
     
     private void waitForFYN(int currentFYN){
         int time = SystemInfo.BatchWaitTime * 2;
@@ -186,7 +177,7 @@ public class PacketHandler extends Thread
             byte[] byteList = (SystemInfo.m_list[i] + "§§" + SystemInfo.m_list_hash[i] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[i])).getBytes();//SystemInfo.m_list[i].getBytes();
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(socket, address, port, bytes, 0);
+            PacketUtil.send(address, port, bytes, 0);
             Setup.log("Sending list packet " + i + " to " + addString);
         }
         if(start == end){
@@ -194,7 +185,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
             
             Setup.log("Sending list EOF code packet to " + addString);
-            PacketUtil.send(socket, address, port, bytes, 0);
+            PacketUtil.send(address, port, bytes, 0);
         }
     }
     
@@ -210,7 +201,7 @@ public class PacketHandler extends Thread
             byte[] byteList = FileManager.readFile(file, i);
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(socket, address, port, bytes, file);
+            PacketUtil.send(address, port, bytes, file);
             Setup.log("Sending file " + file + " packet " + i + " to " + addString);
         }
         if(start == end){
@@ -218,7 +209,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
             
             Setup.log("Sending file " + file + " EOF code packet to " + addString);
-            PacketUtil.send(socket, address, port, bytes, file);
+            PacketUtil.send(address, port, bytes, file);
         }
     }
     
@@ -229,7 +220,7 @@ public class PacketHandler extends Thread
         byte[] byteList = (SystemInfo.m_list[(int)sequence] + "§§" + SystemInfo.m_list_hash[(int)sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(socket, address, port, bytes, 0);
+        PacketUtil.send(address, port, bytes, 0);
         Setup.log("Sending list packet " + sequence + " to " + addString);
     }
     
@@ -240,7 +231,7 @@ public class PacketHandler extends Thread
         byte[] byteList = FileManager.readFile(file, sequence);
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(socket, address, port, bytes, file);
+        PacketUtil.send(address, port, bytes, file);
         Setup.log("Sending file " + file + " packet " + sequence + " to " + addString);
     }
     
@@ -314,7 +305,7 @@ public class PacketHandler extends Thread
             FileManager.writeFile(addString, file, seq, Arrays.copyOfRange(data, startIndex, endIndex));
             
             if(lowestMissingSeq == total || seq < 0) // We received the entire file
-                FileManager.close(socket, address, port, addString, file);
+                FileManager.close(address, port, addString, file);
         }
         else { // Add to list
             if(seq >= 0) {
@@ -354,14 +345,14 @@ public class PacketHandler extends Thread
                 SystemInfo.fileTransferTime.get(addString).put(key, System.currentTimeMillis());
                 Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
                 
-                new Requester(socket, address, port, key, SystemInfo.REQUEST).start();
+                new Requester(address, port, key, SystemInfo.REQUEST).start();
             }
             else Setup.log("File " + e.getKey() + " is in our list. file name: " + e.getValue() + " of: " + addString);
         }
         
         if(!asked){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
     }
     

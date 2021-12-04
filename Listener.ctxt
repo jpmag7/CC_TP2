@@ -1,12 +1,14 @@
 #BlueJ class context
 comment0.target=Listener
 comment0.text=\r\n\ Escreva\ a\ descri\u00E7\u00E3o\ da\ classe\ FTRapid\ aqui.\r\n\ \r\n\ @author\ (seu\ nome)\ \r\n\ @version\ (n\u00FAmero\ de\ vers\u00E3o\ ou\ data)\r\n
-comment1.params=socket
-comment1.target=Listener(java.net.DatagramSocket)
+comment1.params=
+comment1.target=Listener()
 comment2.params=
 comment2.target=void\ run()
 comment3.params=
 comment3.target=void\ Listen()
 comment4.params=
 comment4.target=void\ checkIfAllDone()
-numComments=5
+comment5.params=
+comment5.target=void\ stopAsking()
+numComments=6

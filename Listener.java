@@ -18,18 +18,11 @@ import java.util.Map;
  */
 public class Listener extends Thread
 {  
-    public static DatagramSocket socket;
+    private DatagramSocket socket;
     public static boolean running = true;
     
-    public Listener(DatagramSocket socket){
-        this.socket = socket;
-        
-        try{
-            socket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
-            if(SystemInfo.socketTimeout > 0) socket.setSoTimeout(SystemInfo.socketTimeout);
-        }catch(Exception e){
-            Setup.log("Error setting receive buffer size: " + e);
-        }
+    public Listener(){
+        this.socket = SystemInfo.mySocket;
     }
     
     public void run(){
@@ -38,6 +31,7 @@ public class Listener extends Thread
         }catch (SocketException e) {
         }
         catch(SocketTimeoutException e){
+            stopAsking();
         }
         catch(Exception e){
             e.printStackTrace();
@@ -50,7 +44,7 @@ public class Listener extends Thread
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
             
-            new PacketHandler(socket, packet).start();
+            new PacketHandler(packet).start();
         }
     }
     
@@ -77,7 +71,21 @@ public class Listener extends Thread
             System.out.println("Download speed: " + (transSpeed * 8) + " bits/second");
             Setup.log("Download speed: " + (transSpeed * 8) + " bits/second");
             
-            socket.close();
+            SystemInfo.mySocket.close();
         }
+    }
+    
+    public static void stopAsking() {
+        // Get all locks
+        for(Map<Integer, Lock> m : SystemInfo.fileRequestLock.values())
+            for(Lock l : m.values()) l.lock();
+        
+        // Stop all request loops
+        for(Map<Integer, Long> m : SystemInfo.fileLowestMissing.values())
+            m.replaceAll((k, v) -> v = null);
+        
+        // Release all locks
+        for(Map<Integer, Lock> m : SystemInfo.fileRequestLock.values())
+            for(Lock l : m.values()) l.unlock();
     }
 }

@@ -32,8 +32,7 @@ public class Requester extends Thread
     private Lock l;
     
     
-    public Requester(DatagramSocket socket, InetAddress address, int port, int fileNum, int id){
-        this.socket = socket;
+    public Requester(InetAddress address, int port, int fileNum, int id){
         this.address = address;
         this.port = port;
         this.fileNum = fileNum;
@@ -82,7 +81,7 @@ public class Requester extends Thread
         System.arraycopy(receiveBufferSize, 0, bytes, 12, receiveBufferSize.length);
         
         try{
-            PacketUtil.send(socket, address, port, bytes, id);
+            PacketUtil.send(address, port, bytes, id);
         } catch(Exception e){
             Setup.log("Couldn't send request packet: " + e);
         }
@@ -131,7 +130,7 @@ public class Requester extends Thread
                 l.lock();
                 missingList.put(fileNum, null);
                 timers.put(fileNum, SystemInfo.BatchWaitTime + 1L);
-                FileManager.close(socket, address, port, addString, fileNum, true);
+                FileManager.close(address, port, addString, fileNum, true);
                 f.mkdir();
                 l.unlock();
             }

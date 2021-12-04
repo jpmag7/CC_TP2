@@ -22,7 +22,7 @@ public class PacketUtil
     public static Random r = new Random();
     private final static boolean simulNet = false;
     
-    public static void send(DatagramSocket socket, InetAddress address, int port, byte[] data, int ID) throws Exception{
+    public static void send(InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
         byte[] dataAndID = new byte[data.length + id.length];
         System.arraycopy(id, 0, dataAndID, 0, id.length);
@@ -40,9 +40,9 @@ public class PacketUtil
         
         if(simulNet) 
             for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++) 
-                simulNet(socket, packet);
+                simulNet(SystemInfo.mySocket, packet);
         else for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++)
-                socket.send(packet);
+                SystemInfo.mySocket.send(packet);
     }
     
     

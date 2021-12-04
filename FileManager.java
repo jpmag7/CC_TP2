@@ -45,7 +45,7 @@ public class FileManager
         raf.write(bytes);
     }
     
-    public static void close(DatagramSocket socket, InetAddress address, int port, String addString, int file) throws Exception{
+    public static void close(InetAddress address, int port, String addString, int file) throws Exception{
         Setup.log("Closing file: " + file);
         SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
         filesReceive.get(addString).get(file).close();
@@ -54,14 +54,14 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
     }
     
     
-    public static void close(DatagramSocket socket, InetAddress address, int port, String addString, int file, boolean isFolder) throws Exception{
+    public static void close(InetAddress address, int port, String addString, int file, boolean isFolder) throws Exception{
         Setup.log("Closing file: " + file);
         SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
         //filesReceive.get(addString).get(file).close();
@@ -70,7 +70,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();

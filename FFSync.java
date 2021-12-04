@@ -44,16 +44,17 @@ public class FFSync
         Setup.log("Starting FTRapid");
         
         // Socket
-        DatagramSocket socket = new DatagramSocket(SystemInfo.FTRapidPort);
+        SystemInfo.mySocket = new DatagramSocket(SystemInfo.FTRapidPort);
+        SystemInfo.mySocket.setSoTimeout(60000);
         
         // Setup system info variables
         Setup.setupSystemInfo();
         
         // Request lists of all clients
-        Setup.requestAllLists(socket);
+        Setup.requestAllLists();
         
         // Start listenning for packets
-        Listener client = new Listener(socket);
+        Listener client = new Listener();
         client.start();
         
         // Wait for FYN from clients

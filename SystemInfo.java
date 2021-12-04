@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
+import java.net.DatagramSocket;
 
 /**
  * Escreva a descrição da classe Settings aqui.
@@ -17,6 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SystemInfo
 {
+    // My Socket
+    public static DatagramSocket mySocket;
+    
     // Socket setup variables
     public final static int DefaultFTRapidPort = 80;
     public static int FTRapidPort = 80;

@@ -199,10 +199,10 @@ public class Setup
     }
     
     
-    public static void requestAllLists(DatagramSocket socket) throws Exception{
+    public static void requestAllLists() throws Exception{
         int i = 0;
         for(InetAddress address : addresses){
-            Requester r = new Requester(socket, address, ports[i++], 0, SystemInfo.REQUEST);
+            Requester r = new Requester(address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
         }
     }
