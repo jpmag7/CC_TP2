@@ -18,15 +18,15 @@ import java.net.DatagramSocket;
  */
 public class SystemInfo
 {
-    // My Socket
-    public static DatagramSocket mySocket;
-    
     // Socket setup variables
-    public final static int DefaultFTRapidPort = 80;
+    public static List<DatagramSocket> mySockets = new ArrayList<>();
     public static int FTRapidPort = 80;
+    public final static int socketNumber = 35;
+    public final static int DefaultFTRapidPort = 80;
     public final static int PacketSize = 512;
-    public final static int ReceiveBufferSize = 65536 * 4;
-    public final static int socketTimeout = 60000;
+    public final static int ReceiveBufferSize = 65536;
+    public final static int SendBufferSize = 65536 * 4;
+    public final static int socketTimeout = 60000 * 4;
     
     // Sync control variables
     public static String folder;
@@ -60,7 +60,7 @@ public class SystemInfo
     
     // Request control variables
     public final static int BatchWaitTime = 200; // milliseconds
-    public final static int PacketWaitTime = 10; // milliseconds
+    public final static int PacketWaitTime = 30; // milliseconds
     public static Map<String, Map<Integer, Long>> fileTimers = new HashMap<>();
     public static Map<String, Map<Integer, Lock>> fileRequestLock = new HashMap();
     public static Map<String, Map<Integer, Set<Long>>> fileSeq = new HashMap<>();

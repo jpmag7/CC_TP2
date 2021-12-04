@@ -12,7 +12,10 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -26,6 +29,7 @@ public class Setup
     private static Lock l = new ReentrantLock();
     private static InetAddress[] addresses;
     private static int[] ports;
+    private static Map<InetAddress, List<Integer>> portsByAddresses = new ConcurrentHashMap<>();
     
     // Verificar se o folder existe.
     private static boolean folderVerifica (String folder) {
@@ -48,6 +52,8 @@ public class Setup
             else {
                 try{
                     ports[i] = addAndPort.length == 1 ? SystemInfo.DefaultFTRapidPort : Integer.parseInt(addAndPort[1]);
+                    if(!portsByAddresses.containsKey(address)) portsByAddresses.put(address, new ArrayList<>());
+                    portsByAddresses.get(address).add(ports[i]);
                 }catch(NumberFormatException e){
                     Setup.log("Invalid port: " + addAndPort[1] + " on address " + addAndPort[0]);
                     System.out.println("Invalid port: " + addAndPort[1] + " on address " + addAndPort[0]);
@@ -56,6 +62,20 @@ public class Setup
             }
         }
     } 
+    
+    
+    public static int findPort(InetAddress address, int p){
+        List<Integer> addPorts = portsByAddresses.get(address);
+        int closest = SystemInfo.socketNumber;
+        
+        for(Integer i : addPorts){
+            if(p >= i && p - i < i - closest){
+                closest = i;
+            }
+        }
+        
+        return closest;
+    }
     
     // Preenche a nossa lista de ficheiros
     public static void preencheLista(String pasta) throws Exception{
@@ -170,7 +190,7 @@ public class Setup
     
     
     public static void setupSystemInfo() throws Exception{
-        SystemInfo.BatchSizeReceive = SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize / addresses.length;
+        SystemInfo.BatchSizeReceive = (SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize * SystemInfo.socketNumber) / addresses.length;
         int i = 0;
         
         for(InetAddress add : addresses){
@@ -185,6 +205,7 @@ public class Setup
             SystemInfo.fileTransferTime.put(address, new HashMap<>());
             FileManager.filesAsked.put(address, new AtomicInteger());
             FileManager.filesReceived.put(address, new AtomicInteger());
+            PacketUtil.theirLastUsedSocket.put(address, new AtomicLong());
             
             SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1L);
             
@@ -204,6 +225,20 @@ public class Setup
         for(InetAddress address : addresses){
             Requester r = new Requester(address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
+        }
+    }
+    
+    
+    public static void setupSockets(){
+        for(int i = 0; i < SystemInfo.socketNumber; i++){
+            try{
+                SystemInfo.mySockets.add(new DatagramSocket(SystemInfo.FTRapidPort + i));
+                SystemInfo.mySockets.get(i).setSoTimeout(SystemInfo.socketTimeout);
+                SystemInfo.mySockets.get(i).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
+                SystemInfo.mySockets.get(i).setSendBufferSize(SystemInfo.SendBufferSize);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 }

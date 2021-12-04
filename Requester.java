@@ -81,7 +81,7 @@ public class Requester extends Thread
         System.arraycopy(receiveBufferSize, 0, bytes, 12, receiveBufferSize.length);
         
         try{
-            PacketUtil.send(address, port, bytes, id);
+            PacketUtil.send(addString, address, port, bytes, id);
         } catch(Exception e){
             Setup.log("Couldn't send request packet: " + e);
         }

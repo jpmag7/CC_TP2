@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.List;
 
 /**
  * Escreva a descrição da classe FFSync aqui.
@@ -44,8 +45,9 @@ public class FFSync
         Setup.log("Starting FTRapid");
         
         // Socket
-        SystemInfo.mySocket = new DatagramSocket(SystemInfo.FTRapidPort);
-        SystemInfo.mySocket.setSoTimeout(60000);
+        Setup.setupSockets();
+        
+        Setup.log("Opened " + SystemInfo.mySockets.size() + " sockets for FTRapid connection");
         
         // Setup system info variables
         Setup.setupSystemInfo();
@@ -54,11 +56,14 @@ public class FFSync
         Setup.requestAllLists();
         
         // Start listenning for packets
-        Listener client = new Listener();
-        client.start();
+        List<Listener> clients = new ArrayList<>();
+        for(int i = 0; i < SystemInfo.socketNumber; i++){
+            clients.add(new Listener(i));
+            clients.get(i).start();
+        }
         
         // Wait for FYN from clients
-        client.join();
+        for(Listener l : clients) l.join();
         
         // Type to close
         System.out.println("Syncing process has ended");

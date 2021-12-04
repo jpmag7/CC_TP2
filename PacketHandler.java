@@ -42,7 +42,7 @@ public class PacketHandler extends Thread
         this.data = packet.getData();
         endIndex = packet.getLength();
         this.address = packet.getAddress();
-        this.port = packet.getPort();
+        this.port = Setup.findPort(address, packet.getPort());
         this.addString = "" + address + ":" + port;
         
         if(SystemInfo.startTime == 0L) SystemInfo.startTime = System.currentTimeMillis();
@@ -65,7 +65,7 @@ public class PacketHandler extends Thread
                 if(!FYNReceived.containsKey(addString)) FYNReceived.put(addString, new AtomicInteger());
                 int currentFYN = FYNReceived.get(addString).incrementAndGet();//FYNReceived.incrementAndGet();
                 Setup.log("Receiving FYN signal from: " + addString + " Sending FYN ACK");
-                PacketUtil.send(address, port, new byte[0], SystemInfo.FYNACK);
+                PacketUtil.send(addString, address, port, new byte[0], SystemInfo.FYNACK);
                 waitForFYN(currentFYN);
                 break;
             case SystemInfo.FYNACK: // I'm done with him
@@ -100,7 +100,7 @@ public class PacketHandler extends Thread
             
             Listener.stopAsking();
             
-            SystemInfo.mySocket.close();
+            for(DatagramSocket s : SystemInfo.mySockets) s.close();
         }
     }
     
@@ -125,6 +125,7 @@ public class PacketHandler extends Thread
     
     
     private int verifyPacket(byte[] packet){
+        if(endIndex == 0) return SystemInfo.ERROR;
         int hash = retriveInt(packet);
         byte[] dataAndID = Arrays.copyOfRange(packet, 4, endIndex);
         data = PacketUtil.crypt(dataAndID, hash);
@@ -177,7 +178,7 @@ public class PacketHandler extends Thread
             byte[] byteList = (SystemInfo.m_list[i] + "§§" + SystemInfo.m_list_hash[i] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[i])).getBytes();//SystemInfo.m_list[i].getBytes();
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(address, port, bytes, 0);
+            PacketUtil.send(addString, address, port, bytes, 0);
             Setup.log("Sending list packet " + i + " to " + addString);
         }
         if(start == end){
@@ -185,7 +186,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
             
             Setup.log("Sending list EOF code packet to " + addString);
-            PacketUtil.send(address, port, bytes, 0);
+            PacketUtil.send(addString, address, port, bytes, 0);
         }
     }
     
@@ -201,7 +202,7 @@ public class PacketHandler extends Thread
             byte[] byteList = FileManager.readFile(file, i);
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(address, port, bytes, file);
+            PacketUtil.send(addString, address, port, bytes, file);
             Setup.log("Sending file " + file + " packet " + i + " to " + addString);
         }
         if(start == end){
@@ -209,7 +210,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
             
             Setup.log("Sending file " + file + " EOF code packet to " + addString);
-            PacketUtil.send(address, port, bytes, file);
+            PacketUtil.send(addString, address, port, bytes, file);
         }
     }
     
@@ -220,7 +221,7 @@ public class PacketHandler extends Thread
         byte[] byteList = (SystemInfo.m_list[(int)sequence] + "§§" + SystemInfo.m_list_hash[(int)sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(address, port, bytes, 0);
+        PacketUtil.send(addString, address, port, bytes, 0);
         Setup.log("Sending list packet " + sequence + " to " + addString);
     }
     
@@ -231,7 +232,7 @@ public class PacketHandler extends Thread
         byte[] byteList = FileManager.readFile(file, sequence);
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(address, port, bytes, file);
+        PacketUtil.send(addString, address, port, bytes, file);
         Setup.log("Sending file " + file + " packet " + sequence + " to " + addString);
     }
     

@@ -6,10 +6,12 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 /**
  * Escreva a descrição da classe PacketUtil aqui.
@@ -21,8 +23,10 @@ public class PacketUtil
 {
     public static Random r = new Random();
     private final static boolean simulNet = false;
+    private static AtomicLong lastSocketUsed = new AtomicLong(-1);
+    public static Map<String, AtomicLong> theirLastUsedSocket = new ConcurrentHashMap<>();
     
-    public static void send(InetAddress address, int port, byte[] data, int ID) throws Exception{
+    public static void send(String add, InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
         byte[] dataAndID = new byte[data.length + id.length];
         System.arraycopy(id, 0, dataAndID, 0, id.length);
@@ -36,13 +40,14 @@ public class PacketUtil
         System.arraycopy(hash, 0, encryptedData, 0, hash.length);
         System.arraycopy(dataAndID, 0, encryptedData, hash.length, dataAndID.length);
         
-        DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address, port);
+        DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address,
+            (int)(theirLastUsedSocket.get(add).incrementAndGet() % SystemInfo.socketNumber) + port);
         
         if(simulNet) 
             for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++) 
-                simulNet(SystemInfo.mySocket, packet);
+                simulNet(SystemInfo.mySockets.get((int)(lastSocketUsed.incrementAndGet() % SystemInfo.socketNumber)), packet);
         else for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++)
-                SystemInfo.mySocket.send(packet);
+                SystemInfo.mySockets.get((int)(lastSocketUsed.incrementAndGet() % SystemInfo.socketNumber)).send(packet);
     }
     
     
