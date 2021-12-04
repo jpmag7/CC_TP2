@@ -61,9 +61,9 @@ public class PacketUtil
     }
     
     
-    public static byte[] makePacket(int seqNum, int totalNum, byte[] data){
-        byte[] seq = PacketUtil.intToBytes(seqNum);
-        byte[] total = PacketUtil.intToBytes(totalNum);
+    public static byte[] makePacket(long seqNum, long totalNum, byte[] data){
+        byte[] seq = PacketUtil.longToBytes(seqNum);
+        byte[] total = PacketUtil.longToBytes(totalNum);
         
         byte[] bytes = new byte[data.length + seq.length + total.length];
         
@@ -108,6 +108,13 @@ public class PacketUtil
         bb.putInt(i); 
         return bb.array();
     }
+    
+    
+    public static byte[] longToBytes( final long i ) {
+        ByteBuffer bb = ByteBuffer.allocate(8); 
+        bb.putLong(i); 
+        return bb.array();
+    }
 
     
     public static int byteArrayToInt(byte[] intBytes){
@@ -119,5 +126,11 @@ public class PacketUtil
     public static int byteArrayToInt(byte[] intBytes, int start, int end){
         ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes, start, end - start);
         return byteBuffer.getInt();
+    }
+    
+    
+    public static long byteArrayToLong(byte[] intBytes, int start, int end){
+        ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes, start, end - start);
+        return byteBuffer.getLong();
     }
 }

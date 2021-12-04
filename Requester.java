@@ -27,7 +27,7 @@ public class Requester extends Thread
     private int id;
     private byte[] receiveBufferSize;
     private Map<Integer, Long> timers;
-    private Map<Integer, Integer> missingList;
+    private Map<Integer, Long> missingList;
     private String addString;
     private Lock l;
     
@@ -44,13 +44,13 @@ public class Requester extends Thread
         missingList = SystemInfo.fileLowestMissing.get(addString);
         byte[] file = PacketUtil.intToBytes(fileNum);
         receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
-        bytes = new byte[file.length + file.length + receiveBufferSize.length];
+        bytes = new byte[file.length + 8 + receiveBufferSize.length];
         System.arraycopy(file, 0, bytes, 0, file.length);
     }
     
     
     public void run(){
-        Integer lowestMissing = null;
+        Long lowestMissing = null;
         // Set file timer to now
         timers.put(fileNum, 0L);
         
@@ -76,10 +76,10 @@ public class Requester extends Thread
     }
     
     
-    private void request(int lowestMissing){
-        byte[] seq = PacketUtil.intToBytes(lowestMissing);
+    private void request(long lowestMissing){
+        byte[] seq = PacketUtil.longToBytes(lowestMissing);
         System.arraycopy(seq, 0, bytes, 4, seq.length);
-        System.arraycopy(receiveBufferSize, 0, bytes, 8, receiveBufferSize.length);
+        System.arraycopy(receiveBufferSize, 0, bytes, 12, receiveBufferSize.length);
         
         try{
             PacketUtil.send(socket, address, port, bytes, id);
@@ -131,7 +131,7 @@ public class Requester extends Thread
                 l.lock();
                 missingList.put(fileNum, null);
                 timers.put(fileNum, SystemInfo.BatchWaitTime + 1L);
-                FileManager.close(address, port, addString, fileNum, true);
+                FileManager.close(socket, address, port, addString, fileNum, true);
                 f.mkdir();
                 l.unlock();
             }

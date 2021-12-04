@@ -104,7 +104,7 @@ public class PacketHandler extends Thread
                 for(Lock l : m.values()) l.lock();
             
             // Stop all request loops
-            for(Map<Integer, Integer> m : SystemInfo.fileLowestMissing.values())
+            for(Map<Integer, Long> m : SystemInfo.fileLowestMissing.values())
                 m.replaceAll((k, v) -> v = null);
             
             for(Map<Integer, Lock> m : SystemInfo.fileRequestLock.values())
@@ -152,9 +152,16 @@ public class PacketHandler extends Thread
     }
     
     
+    private long retriveLong(byte[] bytes){
+        long num = PacketUtil.byteArrayToLong(data, startIndex, startIndex + 8);
+        startIndex = startIndex + 8;
+        return num;
+    }
+    
+    
     private void receiveRequest() throws Exception{
         int file = retriveInt(data);
-        int sequence = retriveInt(data);
+        long sequence = retriveLong(data);
         int batchSizeSend = retriveInt(data);
         
         if(sequence < 0){ //Send one batch
@@ -168,9 +175,9 @@ public class PacketHandler extends Thread
     }
     
     // Send List batch
-    private void sendListBatch(int sequence, int batchSizeSend) throws Exception{
+    private void sendListBatch(long sequence, int batchSizeSend) throws Exception{
         int total = SystemInfo.m_list.length;
-        int start = (sequence * -1 - 1) * batchSizeSend;
+        int start = (int)((sequence * -1 - 1) * batchSizeSend);
         int end = Math.min(start + batchSizeSend, total);
         
         Setup.log("Received request for list batch " + (sequence * -1 - 1) + " from " + addString);
@@ -192,14 +199,14 @@ public class PacketHandler extends Thread
     }
     
     // Send File batch
-    private void sendFileBatch(int file, int sequence, int batchSizeSend) throws Exception{
-        int total = FileManager.filesSendSize.get(file);
-        int start = (sequence * -1 - 1) * batchSizeSend;
-        int end = Math.min(start + batchSizeSend, total);
+    private void sendFileBatch(int file, long sequence, int batchSizeSend) throws Exception{
+        long total = FileManager.filesSendSize.get(file);
+        long start = (sequence * -1 - 1) * batchSizeSend;
+        long end = Math.min(start + batchSizeSend, total);
         
         Setup.log("Received request for file " + file + " batch " + (sequence * -1 - 1) + " from " + addString);
         
-        for(int i = start; i < end; i++){
+        for(long i = start; i < end; i++){
             byte[] byteList = FileManager.readFile(file, i);
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
@@ -216,10 +223,10 @@ public class PacketHandler extends Thread
     }
     
     // Send List packet
-    private void sendListPacket(int sequence) throws Exception{
+    private void sendListPacket(long sequence) throws Exception{
         Setup.log("Received request for list packet " + sequence + " from " + addString);
         int total = SystemInfo.m_list.length;
-        byte[] byteList = (SystemInfo.m_list[sequence] + "§§" + SystemInfo.m_list_hash[sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
+        byte[] byteList = (SystemInfo.m_list[(int)sequence] + "§§" + SystemInfo.m_list_hash[(int)sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
         PacketUtil.send(socket, address, port, bytes, 0);
@@ -227,9 +234,9 @@ public class PacketHandler extends Thread
     }
     
     // Send File packet
-    private void sendFilePacket(int file, int sequence) throws Exception{
+    private void sendFilePacket(int file, long sequence) throws Exception{
         Setup.log("Received request for file " + file + " packet " + sequence + " from " + addString);
-        int total = FileManager.filesSendSize.get(file);
+        long total = FileManager.filesSendSize.get(file);
         byte[] byteList = FileManager.readFile(file, sequence);
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
@@ -239,11 +246,11 @@ public class PacketHandler extends Thread
     
     
     private void receiveResponse(int file) throws Exception{ // The number of the file we are receiving
-        int seq = retriveInt(data); // The sequence number of this packet
-        int total = retriveInt(data); // The total number of packet of the original file
-        int startBatch = (seq / SystemInfo.BatchSizeReceive); // Number of the current batch
-        int start = startBatch * SystemInfo.BatchSizeReceive; // Sequence number of the first packet of the batch
-        int end = Math.min(start + SystemInfo.BatchSizeReceive, total); // Sequence number of the last packet of the batch + 1
+        long seq = retriveLong(data); // The sequence number of this packet
+        long total = retriveLong(data); // The total number of packet of the original file
+        long startBatch = (seq / SystemInfo.BatchSizeReceive); // Number of the current batch
+        long start = startBatch * SystemInfo.BatchSizeReceive; // Sequence number of the first packet of the batch
+        long end = Math.min(start + SystemInfo.BatchSizeReceive, total); // Sequence number of the last packet of the batch + 1
         
         // Http stuff
         SystemInfo.transferedPackets.incrementAndGet();
@@ -251,8 +258,8 @@ public class PacketHandler extends Thread
         Lock l = SystemInfo.fileRequestLock.get(addString).get(file);
         l.lock();
         
-        Integer lowestMissingSeq = SystemInfo.fileLowestMissing.get(addString).get(file);
-        Set<Integer> fileSeq = SystemInfo.fileSeq.get(addString).get(file);
+        Long lowestMissingSeq = SystemInfo.fileLowestMissing.get(addString).get(file);
+        Set<Long> fileSeq = SystemInfo.fileSeq.get(addString).get(file);
         Map<Integer, Long> fileTimers = SystemInfo.fileTimers.get(addString);
         
         
@@ -271,7 +278,7 @@ public class PacketHandler extends Thread
             }
             
             if(lowestMissingSeq == seq){ // If this sequence is the lowest missing
-                for(int i = lowestMissingSeq; i < end; i++) // Search for the next lowest missing packet
+                for(long i = lowestMissingSeq; i < end; i++) // Search for the next lowest missing packet
                     if(!fileSeq.contains(i)){
                         lowestMissingSeq = i;
                         break;
@@ -296,7 +303,6 @@ public class PacketHandler extends Thread
             else SystemInfo.fileLowestMissing.get(addString).put(file, lowestMissingSeq); // Update the lowest missing packet
         }
         else {
-            SystemInfo.RepetedPackets++;
             l.unlock();
             SystemInfo.repeatedPackets.incrementAndGet();
             Setup.log("Repeted packet sequence: " + seq + " from file: " + file + " of: " + addString);
@@ -308,13 +314,13 @@ public class PacketHandler extends Thread
             FileManager.writeFile(addString, file, seq, Arrays.copyOfRange(data, startIndex, endIndex));
             
             if(lowestMissingSeq == total || seq < 0) // We received the entire file
-                FileManager.close(address, port, addString, file);
+                FileManager.close(socket, address, port, addString, file);
         }
         else { // Add to list
             if(seq >= 0) {
                 String[] nameAndHashAndTime = new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex).split("§§", 3);
-                SystemInfo.their_lists.get(addString).put(seq + 1, nameAndHashAndTime[0]);
-                SystemInfo.their_lists_hash.get(addString).put(seq + 1, nameAndHashAndTime[1]);
+                SystemInfo.their_lists.get(addString).put((int)seq + 1, nameAndHashAndTime[0]);
+                SystemInfo.their_lists_hash.get(addString).put((int)seq + 1, nameAndHashAndTime[1]);
                 SystemInfo.their_lists_time.get(addString).put(nameAndHashAndTime[0], Long.parseLong(nameAndHashAndTime[2]));
             }
             
@@ -355,7 +361,7 @@ public class PacketHandler extends Thread
         
         if(!asked){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
     }
     

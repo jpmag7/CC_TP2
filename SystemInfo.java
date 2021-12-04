@@ -21,8 +21,8 @@ public class SystemInfo
     public final static int DefaultFTRapidPort = 80;
     public static int FTRapidPort = 80;
     public final static int PacketSize = 512;
-    public final static int ReceiveBufferSize = 65536;// * 4;
-    public final static int socketTimeout = 10000;
+    public final static int ReceiveBufferSize = 65536 * 4;
+    public final static int socketTimeout = 60000;
     
     // Sync control variables
     public static String folder;
@@ -37,7 +37,6 @@ public class SystemInfo
     // Traffic control variables
     public static int Redundancy = 1;
     public static int BatchSizeReceive = -1;
-    public static long RepetedPackets = 0;
     
     // Performance control variables
     public static Long startTime = 0L;
@@ -60,8 +59,8 @@ public class SystemInfo
     public final static int PacketWaitTime = 10; // milliseconds
     public static Map<String, Map<Integer, Long>> fileTimers = new HashMap<>();
     public static Map<String, Map<Integer, Lock>> fileRequestLock = new HashMap();
-    public static Map<String, Map<Integer, Set<Integer>>> fileSeq = new HashMap<>();
-    public static Map<String, Map<Integer, Integer>> fileLowestMissing = new HashMap<>();
+    public static Map<String, Map<Integer, Set<Long>>> fileSeq = new HashMap<>();
+    public static Map<String, Map<Integer, Long>> fileLowestMissing = new HashMap<>();
     public static Map<String, Map<Integer, Long>> fileTransferTime = new HashMap<>();
     public static Set<String> filesRequested = new HashSet<>();
     public static Set<String> filesReceived = new HashSet<>();

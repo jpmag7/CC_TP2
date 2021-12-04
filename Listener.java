@@ -26,7 +26,7 @@ public class Listener extends Thread
         
         try{
             socket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
-            //if(SystemInfo.socketTimeout > 0) socket.setSoTimeout(SystemInfo.socketTimeout);
+            if(SystemInfo.socketTimeout > 0) socket.setSoTimeout(SystemInfo.socketTimeout);
         }catch(Exception e){
             Setup.log("Error setting receive buffer size: " + e);
         }

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.security.MessageDigest;
 import java.io.File;
+import java.net.DatagramSocket;
 
 /**
  * Escreva a descrição da classe FileManager aqui.
@@ -24,13 +25,13 @@ public class FileManager
     public static Map<String, AtomicInteger> filesReceived = new ConcurrentHashMap<>();
     
     // Send
-    public static Map<Integer, Integer> filesSendSize = new ConcurrentHashMap<>();
+    public static Map<Integer, Long> filesSendSize = new ConcurrentHashMap<>();
     public static Map<Integer, FileInputStream> filesSend = new ConcurrentHashMap<>();
     
     // Receive
     public static Map<String, Map<Integer, RandomAccessFile>> filesReceive = new ConcurrentHashMap<>();
     
-    public static byte[] readFile(int file, int sequence) throws Exception{
+    public static byte[] readFile(int file, long sequence) throws Exception{
         FileInputStream f = filesSend.get(file);
         f.getChannel().position(sequence * payloadSize);
         byte[] bytes = new byte[payloadSize];
@@ -38,13 +39,13 @@ public class FileManager
         return size > 0 ? Arrays.copyOf(bytes, size) : new byte[0];
     }
     
-    public static void writeFile(String address, int file, int sequence, byte[] bytes) throws Exception{
+    public static void writeFile(String address, int file, long sequence, byte[] bytes) throws Exception{
         RandomAccessFile raf = filesReceive.get(address).get(file);
         raf.seek(sequence * payloadSize);
         raf.write(bytes);
     }
     
-    public static void close(InetAddress address, int port, String addString, int file) throws Exception{
+    public static void close(DatagramSocket socket, InetAddress address, int port, String addString, int file) throws Exception{
         Setup.log("Closing file: " + file);
         SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
         filesReceive.get(addString).get(file).close();
@@ -53,14 +54,14 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
     }
     
     
-    public static void close(InetAddress address, int port, String addString, int file, boolean isFolder) throws Exception{
+    public static void close(DatagramSocket socket, InetAddress address, int port, String addString, int file, boolean isFolder) throws Exception{
         Setup.log("Closing file: " + file);
         SystemInfo.filesReceived.add(SystemInfo.their_lists.get(addString).get(file));
         //filesReceive.get(addString).get(file).close();
@@ -69,7 +70,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(Listener.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();

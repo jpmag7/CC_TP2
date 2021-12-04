@@ -86,7 +86,7 @@ public class Setup
         for(String s : SystemInfo.m_list){
             if(Files.isRegularFile(Paths.get(pasta, s))){
                 String p = Paths.get(pasta, s).toString();
-                FileManager.filesSendSize.put(i, (int)Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
+                FileManager.filesSendSize.put(i, Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
                 FileManager.filesSend.put(i, new FileInputStream(p));
                 i++;
             }
@@ -186,7 +186,7 @@ public class Setup
             FileManager.filesAsked.put(address, new AtomicInteger());
             FileManager.filesReceived.put(address, new AtomicInteger());
             
-            SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1);
+            SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1L);
             
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }
@@ -194,8 +194,8 @@ public class Setup
     
     public static void setupForNewFile(String address, int file){
         SystemInfo.fileRequestLock.get(address).put(file, new ReentrantLock());
-        SystemInfo.fileLowestMissing.get(address).put(file, -1);
-        SystemInfo.fileSeq.get(address).put(file, new HashSet<Integer>());
+        SystemInfo.fileLowestMissing.get(address).put(file, -1L);
+        SystemInfo.fileSeq.get(address).put(file, new HashSet<Long>());
     }
     
     
