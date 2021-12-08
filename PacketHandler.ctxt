@@ -1,8 +1,8 @@
 #BlueJ class context
 comment0.target=PacketHandler
 comment0.text=\r\n\ Escreva\ a\ descri\u00E7\u00E3o\ da\ classe\ PacketHandler\ aqui.\r\n\ \r\n\ @author\ (seu\ nome)\ \r\n\ @version\ (n\u00FAmero\ de\ vers\u00E3o\ ou\ data)\r\n
-comment1.params=packet
-comment1.target=PacketHandler(java.net.DatagramPacket)
+comment1.params=socket\ packet
+comment1.target=PacketHandler(java.net.DatagramSocket,\ java.net.DatagramPacket)
 comment10.params=sequence\ batchSizeSend
 comment10.target=void\ sendListBatch(long,\ int)
 comment11.params=file\ sequence\ batchSizeSend
@@ -17,6 +17,8 @@ comment15.params=
 comment15.target=void\ requestMissingFiles()
 comment16.params=fileName\ myList\ myHashList\ hisHash
 comment16.target=boolean\ sameHash(java.lang.String,\ java.lang.String[],\ java.lang.String[],\ java.lang.String)
+comment17.params=file
+comment17.target=java.net.DatagramSocket\ chooseSocket(int)
 comment2.params=
 comment2.target=void\ run()
 comment3.params=
@@ -33,4 +35,4 @@ comment8.params=bytes
 comment8.target=long\ retriveLong(byte[])
 comment9.params=
 comment9.target=void\ receiveRequest()
-numComments=17
+numComments=18

@@ -1,4 +1,4 @@
-    import java.net.DatagramSocket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.util.Arrays;
@@ -45,7 +45,7 @@ public class FFSync
         Setup.log("Starting FTRapid");
         
         // Socket
-        Setup.setupSockets();
+        DatagramSocket s = Setup.addSocketReceive();
         
         Setup.log("Opened " + SystemInfo.mySockets.size() + " sockets for FTRapid connection");
         
@@ -56,14 +56,12 @@ public class FFSync
         Setup.requestAllLists();
         
         // Start listenning for packets
-        List<Listener> clients = new ArrayList<>();
-        for(int i = 0; i < SystemInfo.socketNumber; i++){
-            clients.add(new Listener(i));
-            clients.get(i).start();
-        }
+        Listener l = new Listener(s);
+        SystemInfo.listeners.add(l);
+        l.start();
         
         // Wait for FYN from clients
-        for(Listener l : clients) l.join();
+        for(Listener lt : SystemInfo.listeners) lt.join();
         
         // Type to close
         System.out.println("Syncing process has ended");

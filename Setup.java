@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
+import javafx.util.Pair;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -27,7 +28,7 @@ public class Setup
 {
     private static FileOutputStream logFile;
     private static Lock l = new ReentrantLock();
-    private static InetAddress[] addresses;
+    public static InetAddress[] addresses;
     private static int[] ports;
     private static Map<InetAddress, List<Integer>> portsByAddresses = new ConcurrentHashMap<>();
     
@@ -66,10 +67,10 @@ public class Setup
     
     public static int findPort(InetAddress address, int p){
         List<Integer> addPorts = portsByAddresses.get(address);
-        int closest = SystemInfo.socketNumber;
+        int closest = 10000000;
         
         for(Integer i : addPorts){
-            if(p >= i && p - i < i - closest){
+            if(p >= i && p - i < closest - 1){
                 closest = i;
             }
         }
@@ -190,7 +191,7 @@ public class Setup
     
     
     public static void setupSystemInfo() throws Exception{
-        SystemInfo.BatchSizeReceive = (SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize * SystemInfo.socketNumber) / addresses.length;
+        SystemInfo.BatchSizeReceive = (SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize) / addresses.length;
         int i = 0;
         
         for(InetAddress add : addresses){
@@ -202,12 +203,14 @@ public class Setup
             SystemInfo.their_lists.put(address, new HashMap<>());
             SystemInfo.their_lists_hash.put(address, new HashMap<>());
             SystemInfo.their_lists_time.put(address, new HashMap<>());
+            SystemInfo.their_lists_size.put(address, new HashMap<>());
             SystemInfo.fileTransferTime.put(address, new HashMap<>());
             FileManager.filesAsked.put(address, new AtomicInteger());
             FileManager.filesReceived.put(address, new AtomicInteger());
-            PacketUtil.theirLastUsedSocket.put(address, new AtomicLong());
             
             SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1L);
+            
+            PacketUtil.theirSUsed.put(address, new AtomicLong());
             
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }
@@ -223,22 +226,45 @@ public class Setup
     public static void requestAllLists() throws Exception{
         int i = 0;
         for(InetAddress address : addresses){
-            Requester r = new Requester(address, ports[i++], 0, SystemInfo.REQUEST);
+            Requester r = new Requester(SystemInfo.mySockets.get(0), address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
         }
     }
     
     
-    public static void setupSockets(){
-        for(int i = 0; i < SystemInfo.socketNumber; i++){
+    public static DatagramSocket addSocketReceive(){
+        boolean done = false;
+        int i = SystemInfo.mySockets.size();
+        int sNum = SystemInfo.FTRapidPort;
+        while(!done){
             try{
-                SystemInfo.mySockets.add(new DatagramSocket(SystemInfo.FTRapidPort + i));
+                SystemInfo.mySockets.put(i, new DatagramSocket(sNum));
                 SystemInfo.mySockets.get(i).setSoTimeout(SystemInfo.socketTimeout);
                 SystemInfo.mySockets.get(i).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
                 SystemInfo.mySockets.get(i).setSendBufferSize(SystemInfo.SendBufferSize);
+                done = true;
             }catch (Exception e){
-                e.printStackTrace();
+                sNum++;
             }
         }
+        return SystemInfo.mySockets.get(i);
+    }
+    
+    
+    public static DatagramSocket addSocketSend(String key){
+        boolean done = false;
+        int i = SystemInfo.mySockets.size();
+        int sNum = SystemInfo.FTRapidPort;
+        while(!done){
+            try{
+                SystemInfo.sendSockets.put(key, new DatagramSocket(sNum));
+                SystemInfo.sendSockets.get(key).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
+                SystemInfo.sendSockets.get(key).setSendBufferSize(SystemInfo.SendBufferSize);
+                done = true;
+            }catch (Exception e){
+                sNum++;
+            }
+        }
+        return SystemInfo.sendSockets.get(key);
     }
 }

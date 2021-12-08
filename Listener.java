@@ -21,8 +21,8 @@ public class Listener extends Thread
     private DatagramSocket socket;
     public static boolean running = true;
     
-    public Listener(int num){
-        this.socket = SystemInfo.mySockets.get(num);
+    public Listener(DatagramSocket s){
+        this.socket = s;
     }
     
     public void run(){
@@ -31,7 +31,7 @@ public class Listener extends Thread
         }catch (SocketException e) {
         }
         catch(SocketTimeoutException e){
-            for(DatagramSocket s : SystemInfo.mySockets) if(!s.isClosed()) return;
+            for(DatagramSocket s : SystemInfo.mySockets.values()) if(!s.isClosed()) return;
             stopAsking();
         }
         catch(Exception e){
@@ -45,7 +45,7 @@ public class Listener extends Thread
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
             
-            new PacketHandler(packet).start();
+            new PacketHandler(socket, packet).start();
         }
     }
     
@@ -72,7 +72,7 @@ public class Listener extends Thread
             System.out.println("Download speed: " + (transSpeed * 8) + " bits/second");
             Setup.log("Download speed: " + (transSpeed * 8) + " bits/second");
             
-            for(DatagramSocket s : SystemInfo.mySockets) if(!s.isClosed()) s.close();
+            for(DatagramSocket s : SystemInfo.mySockets.values()) if(!s.isClosed()) s.close();
         }
     }
     

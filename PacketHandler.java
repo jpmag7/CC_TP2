@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import javafx.util.Pair;
 
 /**
  * Escreva a descrição da classe PacketHandler aqui.
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PacketHandler extends Thread
 {
+    private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] data;
     private InetAddress address;
@@ -34,7 +36,8 @@ public class PacketHandler extends Thread
     private int startIndex = 0;
     private int endIndex = 0;
     
-    public PacketHandler(DatagramPacket packet){
+    public PacketHandler(DatagramSocket socket, DatagramPacket packet){
+        this.socket = socket;
         this.packet = packet;
     }
     
@@ -42,8 +45,8 @@ public class PacketHandler extends Thread
         this.data = packet.getData();
         endIndex = packet.getLength();
         this.address = packet.getAddress();
-        this.port = Setup.findPort(address, packet.getPort());
-        this.addString = "" + address + ":" + port;
+        this.port = packet.getPort();
+        this.addString = "" + address + ":" + Setup.findPort(address, packet.getPort());
         
         if(SystemInfo.startTime == 0L) SystemInfo.startTime = System.currentTimeMillis();
         
@@ -65,7 +68,7 @@ public class PacketHandler extends Thread
                 if(!FYNReceived.containsKey(addString)) FYNReceived.put(addString, new AtomicInteger());
                 int currentFYN = FYNReceived.get(addString).incrementAndGet();//FYNReceived.incrementAndGet();
                 Setup.log("Receiving FYN signal from: " + addString + " Sending FYN ACK");
-                PacketUtil.send(addString, address, port, new byte[0], SystemInfo.FYNACK);
+                PacketUtil.send(socket, address, port, new byte[0], SystemInfo.FYNACK);
                 waitForFYN(currentFYN);
                 break;
             case SystemInfo.FYNACK: // I'm done with him
@@ -100,7 +103,7 @@ public class PacketHandler extends Thread
             
             Listener.stopAsking();
             
-            for(DatagramSocket s : SystemInfo.mySockets) s.close();
+            for(DatagramSocket s : SystemInfo.mySockets.values()) s.close();
         }
     }
     
@@ -175,23 +178,25 @@ public class PacketHandler extends Thread
         Setup.log("Received request for list batch " + (sequence * -1 - 1) + " from " + addString);
         
         for(int i = start; i < end; i++){
-            byte[] byteList = (SystemInfo.m_list[i] + "§§" + SystemInfo.m_list_hash[i] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[i])).getBytes();//SystemInfo.m_list[i].getBytes();
+            byte[] byteList = (SystemInfo.m_list[i] + "§§" + SystemInfo.m_list_hash[i] + "§§" +
+            SystemInfo.m_list_time.get(SystemInfo.m_list[i]) + "§§" + FileManager.filesSendSize.get(i + 1)).getBytes();//SystemInfo.m_list[i].getBytes();
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(addString, address, port, bytes, 0);
+            PacketUtil.send(socket, address, port, bytes, 0);
             Setup.log("Sending list packet " + i + " to " + addString);
         }
         if(start == end){
             byte[] byteList = new byte[0];
-            byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
+            byte[] bytes = PacketUtil.makePacket(-1, -2, byteList);
             
             Setup.log("Sending list EOF code packet to " + addString);
-            PacketUtil.send(addString, address, port, bytes, 0);
+            PacketUtil.send(socket, address, port, bytes, 0);
         }
     }
     
     // Send File batch
     private void sendFileBatch(int file, long sequence, int batchSizeSend) throws Exception{
+        DatagramSocket s = chooseSocket(file);
         long total = FileManager.filesSendSize.get(file);
         long start = (sequence * -1 - 1) * batchSizeSend;
         long end = Math.min(start + batchSizeSend, total);
@@ -200,17 +205,17 @@ public class PacketHandler extends Thread
         
         for(long i = start; i < end; i++){
             byte[] byteList = FileManager.readFile(file, i);
-            byte[] bytes = PacketUtil.makePacket(i, total, byteList);
+            byte[] bytes = PacketUtil.makePacket(i, -1, byteList);
             
-            PacketUtil.send(addString, address, port, bytes, file);
+            PacketUtil.send(s, address, port, bytes, file);
             Setup.log("Sending file " + file + " packet " + i + " to " + addString);
         }
         if(start == end){
             byte[] byteList = new byte[0];
-            byte[] bytes = PacketUtil.makePacket(-1, 1, byteList);
+            byte[] bytes = PacketUtil.makePacket(-1, -1, byteList);
             
             Setup.log("Sending file " + file + " EOF code packet to " + addString);
-            PacketUtil.send(addString, address, port, bytes, file);
+            PacketUtil.send(s, address, port, bytes, file);
         }
     }
     
@@ -218,32 +223,32 @@ public class PacketHandler extends Thread
     private void sendListPacket(long sequence) throws Exception{
         Setup.log("Received request for list packet " + sequence + " from " + addString);
         int total = SystemInfo.m_list.length;
-        byte[] byteList = (SystemInfo.m_list[(int)sequence] + "§§" + SystemInfo.m_list_hash[(int)sequence] + "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence])).getBytes();//SystemInfo.m_list[sequence].getBytes();
+        byte[] byteList = (SystemInfo.m_list[(int)sequence] + "§§" + SystemInfo.m_list_hash[(int)sequence] +
+            "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence]) + "§§" + FileManager.filesSendSize.get((int)(sequence + 1))).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(addString, address, port, bytes, 0);
+        PacketUtil.send(socket, address, port, bytes, 0);
         Setup.log("Sending list packet " + sequence + " to " + addString);
     }
     
     // Send File packet
     private void sendFilePacket(int file, long sequence) throws Exception{
+        DatagramSocket s = chooseSocket(file);
         Setup.log("Received request for file " + file + " packet " + sequence + " from " + addString);
-        long total = FileManager.filesSendSize.get(file);
         byte[] byteList = FileManager.readFile(file, sequence);
-        byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
+        byte[] bytes = PacketUtil.makePacket(sequence, -1, byteList);
         
-        PacketUtil.send(addString, address, port, bytes, file);
+        PacketUtil.send(s, address, port, bytes, file);
         Setup.log("Sending file " + file + " packet " + sequence + " to " + addString);
     }
     
     
     private void receiveResponse(int file) throws Exception{ // The number of the file we are receiving
         long seq = retriveLong(data); // The sequence number of this packet
-        long total = retriveLong(data); // The total number of packet of the original file
+        long total = file == 0 ? retriveLong(data) : SystemInfo.their_lists_size.get(addString).get(file); // The total number of packet of the original file
         long startBatch = (seq / SystemInfo.BatchSizeReceive); // Number of the current batch
         long start = startBatch * SystemInfo.BatchSizeReceive; // Sequence number of the first packet of the batch
         long end = Math.min(start + SystemInfo.BatchSizeReceive, total); // Sequence number of the last packet of the batch + 1
-        
         // Http stuff
         SystemInfo.transferedPackets.incrementAndGet();
         
@@ -305,18 +310,22 @@ public class PacketHandler extends Thread
         if(file > 0) { // Write to file
             FileManager.writeFile(addString, file, seq, Arrays.copyOfRange(data, startIndex, endIndex));
             
-            if(lowestMissingSeq == total || seq < 0) // We received the entire file
+            if(seq < 0 || lowestMissingSeq == total) // We received the entire file
                 FileManager.close(address, port, addString, file);
         }
         else { // Add to list
             if(seq >= 0) {
-                String[] nameAndHashAndTime = new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex).split("§§", 3);
-                SystemInfo.their_lists.get(addString).put((int)seq + 1, nameAndHashAndTime[0]);
-                SystemInfo.their_lists_hash.get(addString).put((int)seq + 1, nameAndHashAndTime[1]);
-                SystemInfo.their_lists_time.get(addString).put(nameAndHashAndTime[0], Long.parseLong(nameAndHashAndTime[2]));
+                String[] listFileArgs = new String(Arrays.copyOfRange(data, startIndex, endIndex), 0, endIndex - startIndex).split("§§", 4);
+                SystemInfo.their_lists.get(addString).put((int)seq + 1, listFileArgs[0]);
+                SystemInfo.their_lists_hash.get(addString).put((int)seq + 1, listFileArgs[1]);
+                SystemInfo.their_lists_time.get(addString).put(listFileArgs[0], Long.parseLong(listFileArgs[2]));
+                Long size = 0L;
+                try{size = Long.parseLong(listFileArgs[3]);}catch(Exception e) {}
+                size = size == null ? 0L : size;
+                SystemInfo.their_lists_size.get(addString).put((int)seq + 1, size);
             }
             
-            if(lowestMissingSeq == total || seq < 0) // We received the entire list
+            if(seq < 0 || lowestMissingSeq == total) // We received the entire list
                 requestMissingFiles();
         }
         
@@ -345,15 +354,19 @@ public class PacketHandler extends Thread
                 Setup.setupForNewFile(addString, key);
                 SystemInfo.fileTransferTime.get(addString).put(key, System.currentTimeMillis());
                 Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
-                
-                new Requester(address, port, key, SystemInfo.REQUEST).start();
+            
+                DatagramSocket s = Setup.addSocketReceive();   
+                Listener l = new Listener(s);
+                SystemInfo.listeners.add(l);
+                l.start();
+                new Requester(s, address, port, key, SystemInfo.REQUEST).start();
             }
             else Setup.log("File " + e.getKey() + " is in our list. file name: " + e.getValue() + " of: " + addString);
         }
         
         if(!asked){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.mySockets.get(0), address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
     }
     
@@ -369,5 +382,24 @@ public class PacketHandler extends Thread
         
         if(myHashList[pos].equals(hisHash)) return true;
         return false;
+    }
+    
+    
+    private DatagramSocket chooseSocket(int file){
+        String key = "" + address + ":" + port + ":" + file;
+        DatagramSocket s = null;
+        for(Map.Entry<String, Long> e : SystemInfo.sendSocketsTimers.entrySet())
+            if(System.currentTimeMillis() - e.getValue() > SystemInfo.BatchWaitTime){
+                SystemInfo.sendSockets.get(e.getKey()).close();
+                SystemInfo.sendSockets.remove(key);
+                SystemInfo.sendSocketsTimers.remove(key);
+            }
+            
+        if(!SystemInfo.sendSockets.containsKey(key)){
+            s = Setup.addSocketSend(key);
+        }
+        else s = SystemInfo.sendSockets.get(key);
+        SystemInfo.sendSocketsTimers.put(key, System.currentTimeMillis());
+        return s;
     }
 }

@@ -32,7 +32,8 @@ public class Requester extends Thread
     private Lock l;
     
     
-    public Requester(InetAddress address, int port, int fileNum, int id){
+    public Requester(DatagramSocket s, InetAddress address, int port, int fileNum, int id){
+        this.socket = s;
         this.address = address;
         this.port = port;
         this.fileNum = fileNum;
@@ -42,7 +43,8 @@ public class Requester extends Thread
         timers = SystemInfo.fileTimers.get(addString);
         missingList = SystemInfo.fileLowestMissing.get(addString);
         byte[] file = PacketUtil.intToBytes(fileNum);
-        receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
+        if(fileNum == 0) receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
+        else receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive * Setup.addresses.length);
         bytes = new byte[file.length + 8 + receiveBufferSize.length];
         System.arraycopy(file, 0, bytes, 0, file.length);
     }
@@ -81,9 +83,10 @@ public class Requester extends Thread
         System.arraycopy(receiveBufferSize, 0, bytes, 12, receiveBufferSize.length);
         
         try{
-            PacketUtil.send(addString, address, port, bytes, id);
+            PacketUtil.send(socket, address, port, bytes, id);
         } catch(Exception e){
             Setup.log("Couldn't send request packet: " + e);
+            e.printStackTrace();
         }
     }
     

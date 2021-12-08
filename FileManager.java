@@ -20,7 +20,7 @@ import java.net.DatagramSocket;
  */
 public class FileManager
 {
-    public static int payloadSize = SystemInfo.PacketSize - 24;
+    public static int payloadSize = SystemInfo.PacketSize - 16;
     public static Map<String, AtomicInteger> filesAsked = new ConcurrentHashMap<>();
     public static Map<String, AtomicInteger> filesReceived = new ConcurrentHashMap<>();
     
@@ -54,7 +54,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.mySockets.get(0), address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
@@ -70,7 +70,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.mySockets.get(0), address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
