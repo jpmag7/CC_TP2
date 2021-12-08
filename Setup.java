@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
-import javafx.util.Pair;
 
 /**
  * Escreva a descrição da classe Setup aqui.
@@ -226,45 +225,9 @@ public class Setup
     public static void requestAllLists() throws Exception{
         int i = 0;
         for(InetAddress address : addresses){
-            Requester r = new Requester(SystemInfo.mySockets.get(0), address, ports[i++], 0, SystemInfo.REQUEST);
+            Requester r = new Requester(SystemInfo.socket, address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
         }
     }
     
-    
-    public static DatagramSocket addSocketReceive(){
-        boolean done = false;
-        int i = SystemInfo.mySockets.size();
-        int sNum = SystemInfo.FTRapidPort;
-        while(!done){
-            try{
-                SystemInfo.mySockets.put(i, new DatagramSocket(sNum));
-                SystemInfo.mySockets.get(i).setSoTimeout(SystemInfo.socketTimeout);
-                SystemInfo.mySockets.get(i).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
-                SystemInfo.mySockets.get(i).setSendBufferSize(SystemInfo.SendBufferSize);
-                done = true;
-            }catch (Exception e){
-                sNum++;
-            }
-        }
-        return SystemInfo.mySockets.get(i);
-    }
-    
-    
-    public static DatagramSocket addSocketSend(String key){
-        boolean done = false;
-        int i = SystemInfo.mySockets.size();
-        int sNum = SystemInfo.FTRapidPort;
-        while(!done){
-            try{
-                SystemInfo.sendSockets.put(key, new DatagramSocket(sNum));
-                SystemInfo.sendSockets.get(key).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
-                SystemInfo.sendSockets.get(key).setSendBufferSize(SystemInfo.SendBufferSize);
-                done = true;
-            }catch (Exception e){
-                sNum++;
-            }
-        }
-        return SystemInfo.sendSockets.get(key);
-    }
 }

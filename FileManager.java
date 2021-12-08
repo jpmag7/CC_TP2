@@ -54,7 +54,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.mySockets.get(0), address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.socket, address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
@@ -70,7 +70,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.mySockets.get(0), address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.socket, address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();

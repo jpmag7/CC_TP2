@@ -31,7 +31,6 @@ public class Listener extends Thread
         }catch (SocketException e) {
         }
         catch(SocketTimeoutException e){
-            for(DatagramSocket s : SystemInfo.mySockets.values()) if(!s.isClosed()) return;
             stopAsking();
         }
         catch(Exception e){
@@ -72,7 +71,7 @@ public class Listener extends Thread
             System.out.println("Download speed: " + (transSpeed * 8) + " bits/second");
             Setup.log("Download speed: " + (transSpeed * 8) + " bits/second");
             
-            for(DatagramSocket s : SystemInfo.mySockets.values()) if(!s.isClosed()) s.close();
+            SystemInfo.socket.close();
         }
     }
     

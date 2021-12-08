@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.net.DatagramSocket;
-import javafx.util.Pair;
 
 /**
  * Escreva a descrição da classe Settings aqui.
@@ -21,14 +20,12 @@ import javafx.util.Pair;
 public class SystemInfo
 {
     // Socket setup variables
-    public static Map<Integer, DatagramSocket> mySockets = new ConcurrentHashMap<>();
-    public static Map<String, DatagramSocket> sendSockets = new ConcurrentHashMap<>();
-    public static Map<String, Long> sendSocketsTimers = new ConcurrentHashMap<>();
+    public static DatagramSocket socket;
     public static int FTRapidPort = 80;
     public final static int DefaultFTRapidPort = 80;
     public final static int PacketSize = 512;
-    public final static int ReceiveBufferSize = 65536;
-    public final static int SendBufferSize = 65536;
+    public final static int ReceiveBufferSize = 65536 * 4;
+    public final static int SendBufferSize = 65536 * 4;
     public final static int socketTimeout = 60000;
     
     // Sync control variables
@@ -45,7 +42,6 @@ public class SystemInfo
     // Traffic control variables
     public static int Redundancy = 1;
     public static int BatchSizeReceive = -1;
-    public static Set<Listener> listeners = ConcurrentHashMap.newKeySet();
     
     // Performance control variables
     public static Long startTime = 0L;
@@ -65,7 +61,7 @@ public class SystemInfo
     
     // Request control variables
     public final static int BatchWaitTime = 200; // milliseconds
-    public final static int PacketWaitTime = 30; // milliseconds
+    public final static int PacketWaitTime = 10; // milliseconds
     public static Map<String, Map<Integer, Long>> fileTimers = new HashMap<>();
     public static Map<String, Map<Integer, Lock>> fileRequestLock = new HashMap();
     public static Map<String, Map<Integer, Set<Long>>> fileSeq = new HashMap<>();

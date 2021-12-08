@@ -41,8 +41,6 @@ public class PacketUtil
         System.arraycopy(hash, 0, encryptedData, 0, hash.length);
         System.arraycopy(dataAndID, 0, encryptedData, hash.length, dataAndID.length);
         
-        //DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address,
-        //    (int)((theirSUsed.get(add).incrementAndGet() % SystemInfo.socketNumber) + port));
         DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address, port);
         
         if(simulNet) 

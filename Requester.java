@@ -43,8 +43,7 @@ public class Requester extends Thread
         timers = SystemInfo.fileTimers.get(addString);
         missingList = SystemInfo.fileLowestMissing.get(addString);
         byte[] file = PacketUtil.intToBytes(fileNum);
-        if(fileNum == 0) receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
-        else receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive * Setup.addresses.length);
+        receiveBufferSize = PacketUtil.intToBytes(SystemInfo.BatchSizeReceive);
         bytes = new byte[file.length + 8 + receiveBufferSize.length];
         System.arraycopy(file, 0, bytes, 0, file.length);
     }

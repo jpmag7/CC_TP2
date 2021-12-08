@@ -16,7 +16,6 @@ import java.util.stream.Stream;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import javafx.util.Pair;
 
 /**
  * Escreva a descrição da classe PacketHandler aqui.
@@ -103,7 +102,7 @@ public class PacketHandler extends Thread
             
             Listener.stopAsking();
             
-            for(DatagramSocket s : SystemInfo.mySockets.values()) s.close();
+            SystemInfo.socket.close();
         }
     }
     
@@ -196,7 +195,6 @@ public class PacketHandler extends Thread
     
     // Send File batch
     private void sendFileBatch(int file, long sequence, int batchSizeSend) throws Exception{
-        DatagramSocket s = chooseSocket(file);
         long total = FileManager.filesSendSize.get(file);
         long start = (sequence * -1 - 1) * batchSizeSend;
         long end = Math.min(start + batchSizeSend, total);
@@ -207,7 +205,7 @@ public class PacketHandler extends Thread
             byte[] byteList = FileManager.readFile(file, i);
             byte[] bytes = PacketUtil.makePacket(i, -1, byteList);
             
-            PacketUtil.send(s, address, port, bytes, file);
+            PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
             Setup.log("Sending file " + file + " packet " + i + " to " + addString);
         }
         if(start == end){
@@ -215,7 +213,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, -1, byteList);
             
             Setup.log("Sending file " + file + " EOF code packet to " + addString);
-            PacketUtil.send(s, address, port, bytes, file);
+            PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
         }
     }
     
@@ -233,12 +231,11 @@ public class PacketHandler extends Thread
     
     // Send File packet
     private void sendFilePacket(int file, long sequence) throws Exception{
-        DatagramSocket s = chooseSocket(file);
         Setup.log("Received request for file " + file + " packet " + sequence + " from " + addString);
         byte[] byteList = FileManager.readFile(file, sequence);
         byte[] bytes = PacketUtil.makePacket(sequence, -1, byteList);
         
-        PacketUtil.send(s, address, port, bytes, file);
+        PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
         Setup.log("Sending file " + file + " packet " + sequence + " to " + addString);
     }
     
@@ -355,18 +352,14 @@ public class PacketHandler extends Thread
                 SystemInfo.fileTransferTime.get(addString).put(key, System.currentTimeMillis());
                 Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
             
-                DatagramSocket s = Setup.addSocketReceive();   
-                Listener l = new Listener(s);
-                SystemInfo.listeners.add(l);
-                l.start();
-                new Requester(s, address, port, key, SystemInfo.REQUEST).start();
+                new Requester(SystemInfo.socket, address, port, key, SystemInfo.REQUEST).start();
             }
             else Setup.log("File " + e.getKey() + " is in our list. file name: " + e.getValue() + " of: " + addString);
         }
         
         if(!asked){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.mySockets.get(0), address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
     }
     
@@ -382,24 +375,5 @@ public class PacketHandler extends Thread
         
         if(myHashList[pos].equals(hisHash)) return true;
         return false;
-    }
-    
-    
-    private DatagramSocket chooseSocket(int file){
-        String key = "" + address + ":" + port + ":" + file;
-        DatagramSocket s = null;
-        for(Map.Entry<String, Long> e : SystemInfo.sendSocketsTimers.entrySet())
-            if(System.currentTimeMillis() - e.getValue() > SystemInfo.BatchWaitTime){
-                SystemInfo.sendSockets.get(e.getKey()).close();
-                SystemInfo.sendSockets.remove(key);
-                SystemInfo.sendSocketsTimers.remove(key);
-            }
-            
-        if(!SystemInfo.sendSockets.containsKey(key)){
-            s = Setup.addSocketSend(key);
-        }
-        else s = SystemInfo.sendSockets.get(key);
-        SystemInfo.sendSocketsTimers.put(key, System.currentTimeMillis());
-        return s;
     }
 }
