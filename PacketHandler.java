@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PacketHandler extends Thread
 {
-    private DatagramSocket socket;
     private DatagramPacket packet;
     private byte[] data;
     private InetAddress address;
@@ -35,8 +34,7 @@ public class PacketHandler extends Thread
     private int startIndex = 0;
     private int endIndex = 0;
     
-    public PacketHandler(DatagramSocket socket, DatagramPacket packet){
-        this.socket = socket;
+    public PacketHandler(DatagramPacket packet){
         this.packet = packet;
     }
     
@@ -45,7 +43,7 @@ public class PacketHandler extends Thread
         endIndex = packet.getLength();
         this.address = packet.getAddress();
         this.port = packet.getPort();
-        this.addString = "" + address + ":" + Setup.findPort(address, packet.getPort());
+        this.addString = "" + address + ":" + Setup.findMainPort(address, packet.getPort());
         
         if(SystemInfo.startTime == 0L) SystemInfo.startTime = System.currentTimeMillis();
         
@@ -67,7 +65,7 @@ public class PacketHandler extends Thread
                 if(!FYNReceived.containsKey(addString)) FYNReceived.put(addString, new AtomicInteger());
                 int currentFYN = FYNReceived.get(addString).incrementAndGet();//FYNReceived.incrementAndGet();
                 Setup.log("Receiving FYN signal from: " + addString + " Sending FYN ACK");
-                PacketUtil.send(socket, address, port, new byte[0], SystemInfo.FYNACK);
+                PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, new byte[0], SystemInfo.FYNACK);
                 waitForFYN(currentFYN);
                 break;
             case SystemInfo.FYNACK: // I'm done with him
@@ -76,6 +74,9 @@ public class PacketHandler extends Thread
                 l.lock();
                 SystemInfo.fileLowestMissing.get(addString).put(SystemInfo.FYN, null);
                 SystemInfo.fileTimers.get(addString).put(SystemInfo.FYN, SystemInfo.BatchWaitTime + 1L);
+                if(SystemInfo.receSockets.containsKey(addString) && !SystemInfo.receSockets.get(addString).isClosed())
+                    SystemInfo.receSockets.get(addString).close();
+                SystemInfo.receSockets.remove(addString);
                 l.unlock();
                 Listener.checkIfAllDone();
                 break;
@@ -90,7 +91,8 @@ public class PacketHandler extends Thread
     private void handleCorruption(){
         Setup.log("Corrupted packet from: " + addString);
         SystemInfo.corruptedPackets.incrementAndGet();
-        if((SystemInfo.transferedPackets.get() + SystemInfo.corruptedPackets.get()) / SystemInfo.their_lists.size() <= 1){
+        if((SystemInfo.transferedPackets.get() + SystemInfo.corruptedPackets.get()) / SystemInfo.their_lists.size() <= 1 &&
+            SystemInfo.corruptedPackets.get() > 20){
             System.out.println("Probable password mismatch");
             Listener.running = false;
             
@@ -102,7 +104,9 @@ public class PacketHandler extends Thread
             
             Listener.stopAsking();
             
-            SystemInfo.socket.close();
+            for(DatagramSocket s : SystemInfo.sendSockets.values()) if(!s.isClosed()) s.close();
+            if(!SystemInfo.mainSocket.isClosed()) SystemInfo.mainSocket.close();
+            for(DatagramSocket s : SystemInfo.receSockets.values()) if(!s.isClosed()) s.close();
         }
     }
     
@@ -120,6 +124,9 @@ public class PacketHandler extends Thread
         }
         
         if(time == 0 && currentFYN == FYNReceived.get(addString).get()){//FYNReceived.get()){
+            DatagramSocket s = SystemInfo.sendSockets.get(addString);
+            SystemInfo.sendSockets.remove(addString);
+            s.close();
             SystemInfo.clientsDoneWithMe.add(addString);
             Listener.checkIfAllDone();
         }
@@ -181,15 +188,15 @@ public class PacketHandler extends Thread
             SystemInfo.m_list_time.get(SystemInfo.m_list[i]) + "§§" + FileManager.filesSendSize.get(i + 1)).getBytes();//SystemInfo.m_list[i].getBytes();
             byte[] bytes = PacketUtil.makePacket(i, total, byteList);
             
-            PacketUtil.send(socket, address, port, bytes, 0);
+            PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, 0);
             Setup.log("Sending list packet " + i + " to " + addString);
         }
         if(start == end){
             byte[] byteList = new byte[0];
-            byte[] bytes = PacketUtil.makePacket(-1, -2, byteList);
+            byte[] bytes = PacketUtil.makePacket(-1, 0, byteList);
             
             Setup.log("Sending list EOF code packet to " + addString);
-            PacketUtil.send(socket, address, port, bytes, 0);
+            PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, 0);
         }
     }
     
@@ -205,7 +212,7 @@ public class PacketHandler extends Thread
             byte[] byteList = FileManager.readFile(file, i);
             byte[] bytes = PacketUtil.makePacket(i, -1, byteList);
             
-            PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
+            PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, file);
             Setup.log("Sending file " + file + " packet " + i + " to " + addString);
         }
         if(start == end){
@@ -213,7 +220,7 @@ public class PacketHandler extends Thread
             byte[] bytes = PacketUtil.makePacket(-1, -1, byteList);
             
             Setup.log("Sending file " + file + " EOF code packet to " + addString);
-            PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
+            PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, file);
         }
     }
     
@@ -225,7 +232,7 @@ public class PacketHandler extends Thread
             "§§" + SystemInfo.m_list_time.get(SystemInfo.m_list[(int)sequence]) + "§§" + FileManager.filesSendSize.get((int)(sequence + 1))).getBytes();//SystemInfo.m_list[sequence].getBytes();
         byte[] bytes = PacketUtil.makePacket(sequence, total, byteList);
         
-        PacketUtil.send(socket, address, port, bytes, 0);
+        PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, 0);
         Setup.log("Sending list packet " + sequence + " to " + addString);
     }
     
@@ -235,7 +242,7 @@ public class PacketHandler extends Thread
         byte[] byteList = FileManager.readFile(file, sequence);
         byte[] bytes = PacketUtil.makePacket(sequence, -1, byteList);
         
-        PacketUtil.send(SystemInfo.socket, address, port, bytes, file);
+        PacketUtil.send(SystemInfo.sendSockets.get(addString), address, port, bytes, file);
         Setup.log("Sending file " + file + " packet " + sequence + " to " + addString);
     }
     
@@ -352,16 +359,17 @@ public class PacketHandler extends Thread
                 SystemInfo.fileTransferTime.get(addString).put(key, System.currentTimeMillis());
                 Setup.log("Starting request of file: " + key + " name: " + value + " of: " + port + addString);
             
-                new Requester(SystemInfo.socket, address, port, key, SystemInfo.REQUEST).start();
+                new Requester(SystemInfo.receSockets.get(addString), address, port, key, SystemInfo.REQUEST).start();
             }
             else Setup.log("File " + e.getKey() + " is in our list. file name: " + e.getValue() + " of: " + addString);
         }
         
         if(!asked){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.socket, address, port, SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.receSockets.get(addString), address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
     }
+    
     
     private boolean sameHash(String fileName, String[] myList, String[] myHashList, String hisHash){
         int pos = -1;

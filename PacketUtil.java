@@ -24,8 +24,6 @@ public class PacketUtil
 {
     public static Random r = new SecureRandom();
     private final static boolean simulNet = false;
-    private static AtomicLong lastSUsed = new AtomicLong();
-    public static Map<String, AtomicLong> theirSUsed= new ConcurrentHashMap<>();
     
     public static void send(DatagramSocket socket, InetAddress address, int port, byte[] data, int ID) throws Exception{
         byte[] id = intToBytes(ID);
@@ -42,6 +40,7 @@ public class PacketUtil
         System.arraycopy(dataAndID, 0, encryptedData, hash.length, dataAndID.length);
         
         DatagramPacket packet = new DatagramPacket(encryptedData, encryptedData.length, address, port);
+        if (socket == null) System.out.println("trying to send: " + ID + " to: " + port);
         
         if(simulNet) 
             for (int i = 0; i < (ID > 0 ? SystemInfo.Redundancy : 1); i++) 

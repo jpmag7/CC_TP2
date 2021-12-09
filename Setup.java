@@ -64,16 +64,15 @@ public class Setup
     } 
     
     
-    public static int findPort(InetAddress address, int p){
+    public static int findMainPort(InetAddress address, int p){
         List<Integer> addPorts = portsByAddresses.get(address);
-        int closest = 10000000;
+        int closest = 0;
         
         for(Integer i : addPorts){
-            if(p >= i && p - i < closest - 1){
+            if(p >= i && p - i < p - closest){
                 closest = i;
             }
         }
-        
         return closest;
     }
     
@@ -108,6 +107,7 @@ public class Setup
                 String p = Paths.get(pasta, s).toString();
                 FileManager.filesSendSize.put(i, Files.size(Paths.get(p)) / FileManager.payloadSize + 1);
                 FileManager.filesSend.put(i, new FileInputStream(p));
+                FileManager.filesSendLocks.put(i, new ReentrantLock());
                 i++;
             }
             else i++;
@@ -191,6 +191,13 @@ public class Setup
     
     public static void setupSystemInfo() throws Exception{
         SystemInfo.BatchSizeReceive = (SystemInfo.ReceiveBufferSize / SystemInfo.PacketSize) / addresses.length;
+        
+        // Socket
+        SystemInfo.mainSocket = new DatagramSocket(SystemInfo.FTRapidPort);
+        SystemInfo.mainSocket.setSoTimeout(SystemInfo.socketTimeout);
+        SystemInfo.mainSocket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize * 2);
+        SystemInfo.mainSocket.setSendBufferSize(SystemInfo.SendBufferSize);
+        
         int i = 0;
         
         for(InetAddress add : addresses){
@@ -207,13 +214,48 @@ public class Setup
             FileManager.filesAsked.put(address, new AtomicInteger());
             FileManager.filesReceived.put(address, new AtomicInteger());
             
+            addSendSocket(address);
+            addReceiveSocket(address);
+            
             SystemInfo.fileLowestMissing.get(address).put(SystemInfo.FYN, -1L);
-            
-            PacketUtil.theirSUsed.put(address, new AtomicLong());
-            
+                        
             setupForNewFile(address, 0); // Prepare to receive clint's lists
         }
     }
+    
+    private static void addSendSocket(String add){
+        boolean done = false;
+        int p = SystemInfo.FTRapidPort + 1;
+        while(!done){
+            try{
+                SystemInfo.sendSockets.put(add, new DatagramSocket(p));
+                SystemInfo.sendSockets.get(add).setSoTimeout(SystemInfo.socketTimeout);
+                SystemInfo.sendSockets.get(add).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
+                SystemInfo.sendSockets.get(add).setSendBufferSize(SystemInfo.SendBufferSize);
+                done = true;
+            }catch(Exception e){
+                p++;
+            }
+        }
+    }
+    
+    
+    private static void addReceiveSocket(String add){
+        boolean done = false;
+        int p = SystemInfo.FTRapidPort + 1;
+        while(!done){
+            try{
+                SystemInfo.receSockets.put(add, new DatagramSocket(p));
+                SystemInfo.receSockets.get(add).setSoTimeout(SystemInfo.socketTimeout);
+                SystemInfo.receSockets.get(add).setReceiveBufferSize(SystemInfo.ReceiveBufferSize);
+                SystemInfo.receSockets.get(add).setSendBufferSize(SystemInfo.SendBufferSize);
+                done = true;
+            }catch(Exception e){
+                p++;
+            }
+        }
+    }
+    
     
     public static void setupForNewFile(String address, int file){
         SystemInfo.fileRequestLock.get(address).put(file, new ReentrantLock());
@@ -225,9 +267,9 @@ public class Setup
     public static void requestAllLists() throws Exception{
         int i = 0;
         for(InetAddress address : addresses){
-            Requester r = new Requester(SystemInfo.socket, address, ports[i++], 0, SystemInfo.REQUEST);
+            String add = "" + address.toString().substring(address.toString().indexOf("/")) + ":" + ports[i];
+            Requester r = new Requester(SystemInfo.receSockets.get(add), address, ports[i++], 0, SystemInfo.REQUEST);
             r.start();
         }
     }
-    
 }

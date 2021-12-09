@@ -20,7 +20,10 @@ import java.net.DatagramSocket;
 public class SystemInfo
 {
     // Socket setup variables
-    public static DatagramSocket socket;
+    public static DatagramSocket mainSocket;
+    public static Map<String, DatagramSocket> receSockets = new ConcurrentHashMap<>();
+    public static Map<String, DatagramSocket> sendSockets = new ConcurrentHashMap<>();
+    
     public static int FTRapidPort = 80;
     public final static int DefaultFTRapidPort = 80;
     public final static int PacketSize = 512;

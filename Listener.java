@@ -9,6 +9,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Map;
+import java.io.RandomAccessFile;
 
 /**
  * Escreva a descrição da classe FTRapid aqui.
@@ -20,6 +21,7 @@ public class Listener extends Thread
 {  
     private DatagramSocket socket;
     public static boolean running = true;
+    private static boolean saiu = false;
     
     public Listener(DatagramSocket s){
         this.socket = s;
@@ -31,7 +33,7 @@ public class Listener extends Thread
         }catch (SocketException e) {
         }
         catch(SocketTimeoutException e){
-            stopAsking();
+            //stopAsking();
         }
         catch(Exception e){
             e.printStackTrace();
@@ -44,7 +46,7 @@ public class Listener extends Thread
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
             
-            new PacketHandler(socket, packet).start();
+            new PacketHandler(packet).start();
         }
     }
     
@@ -54,8 +56,9 @@ public class Listener extends Thread
             if(SystemInfo.fileLowestMissing.get(a).get(SystemInfo.FYN) == null) doneWith++;
         }
         
-        if(SystemInfo.their_lists.size() == doneWith &&
-           SystemInfo.their_lists.size() == SystemInfo.clientsDoneWithMe.size()) {
+        if(saiu) return;
+        if(SystemInfo.sendSockets.size() == 0 && SystemInfo.receSockets.size() == 0) {
+            saiu = true;
             Long totalTime = 0L;
             for(Map<Integer, Long> e : SystemInfo.fileTransferTime.values()){
                 for(Long l : e.values()) {
@@ -71,7 +74,13 @@ public class Listener extends Thread
             System.out.println("Download speed: " + (transSpeed * 8) + " bits/second");
             Setup.log("Download speed: " + (transSpeed * 8) + " bits/second");
             
-            SystemInfo.socket.close();
+            for(DatagramSocket s : SystemInfo.sendSockets.values()) if(!s.isClosed()) s.close();
+            if(!SystemInfo.mainSocket.isClosed()) SystemInfo.mainSocket.close();
+            for(DatagramSocket s : SystemInfo.receSockets.values()) if(!s.isClosed()) s.close();
+            try{
+        	for(Map<Integer, RandomAccessFile> m : FileManager.filesReceive.values())
+                    for(RandomAccessFile f : m.values()) f.close();
+            }catch(Exception e) {}
         }
     }
     

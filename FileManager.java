@@ -26,16 +26,19 @@ public class FileManager
     
     // Send
     public static Map<Integer, Long> filesSendSize = new ConcurrentHashMap<>();
+    public static Map<Integer, Lock> filesSendLocks = new ConcurrentHashMap<>();
     public static Map<Integer, FileInputStream> filesSend = new ConcurrentHashMap<>();
     
     // Receive
     public static Map<String, Map<Integer, RandomAccessFile>> filesReceive = new ConcurrentHashMap<>();
     
     public static byte[] readFile(int file, long sequence) throws Exception{
+        filesSendLocks.get(file).lock();
         FileInputStream f = filesSend.get(file);
         f.getChannel().position(sequence * payloadSize);
         byte[] bytes = new byte[payloadSize];
         int size = f.read(bytes);
+        filesSendLocks.get(file).unlock();
         return size > 0 ? Arrays.copyOf(bytes, size) : new byte[0];
     }
     
@@ -54,7 +57,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.socket, address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.receSockets.get(addString), address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();
@@ -70,7 +73,7 @@ public class FileManager
         
         if(FileManager.filesReceived.get(addString).get() == FileManager.filesAsked.get(addString).get()){
             Setup.setupForNewFile(addString, SystemInfo.FYN);
-            new Requester(SystemInfo.socket, address, Setup.findPort(address, port), SystemInfo.FYN, SystemInfo.FYN).start();
+            new Requester(SystemInfo.receSockets.get(addString), address, port, SystemInfo.FYN, SystemInfo.FYN).start();
         }
         
         Listener.checkIfAllDone();

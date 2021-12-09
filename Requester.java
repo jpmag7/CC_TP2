@@ -38,7 +38,7 @@ public class Requester extends Thread
         this.port = port;
         this.fileNum = fileNum;
         this.id = id;
-        this.addString = "" + address.toString().substring(address.toString().indexOf("/")) + ":" + port;
+        this.addString = "" + address.toString().substring(address.toString().indexOf("/")) + ":" + Setup.findMainPort(address, port);
         this.l = SystemInfo.fileRequestLock.get(addString).get(fileNum);
         timers = SystemInfo.fileTimers.get(addString);
         missingList = SystemInfo.fileLowestMissing.get(addString);

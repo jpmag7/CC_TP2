@@ -44,12 +44,6 @@ public class FFSync
         System.out.println("Starting sync");
         Setup.log("Starting FTRapid");
         
-        // Socket
-        SystemInfo.socket = new DatagramSocket(SystemInfo.FTRapidPort);
-        SystemInfo.socket.setSoTimeout(SystemInfo.socketTimeout);
-        SystemInfo.socket.setReceiveBufferSize(SystemInfo.ReceiveBufferSize * 2);
-        SystemInfo.socket.setSendBufferSize(SystemInfo.SendBufferSize);
-        
         // Setup system info variables
         Setup.setupSystemInfo();
         
@@ -57,11 +51,23 @@ public class FFSync
         Setup.requestAllLists();
         
         // Start listenning for packets
-        Listener l = new Listener(SystemInfo.socket);
-        l.start();
+        List<Listener> ls = new ArrayList<>();
+        Listener lm = new Listener(SystemInfo.mainSocket);
+        lm.start();
+        ls.add(lm);
+        for(DatagramSocket s : SystemInfo.receSockets.values()){
+            Listener l = new Listener(s);
+            l.start();
+            ls.add(l);
+        }
+        for(DatagramSocket s : SystemInfo.sendSockets.values()){
+            Listener l = new Listener(s);
+            l.start();
+            ls.add(l);
+        }
         
         // Wait for FYN from clients
-        l.join();
+        for(Listener l : ls) l.join();
         
         // Type to close
         System.out.println("Syncing process has ended");
